@@ -1,0 +1,23 @@
+name: Feature Request
+description: I would like to propose a new feature or enhance an existing one.
+labels: ["feature"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before opening a new issue, take a moment to search through the current open and closed ones.
+      description: 'If you find a similar issue, kindly add a `👍️` reaction to it.'
+      options:
+        - label: This feature has not been previously requested.
+          required: true
+
+  - type: markdown
+    attributes:
+      value: ---
+
+  - type: textarea
+    id: desc
+    attributes:
+      label: Feature Description
+      description: Please provide a detailed description of your proposed feature.
+    validations:
+      required: true

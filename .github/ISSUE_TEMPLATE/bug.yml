@@ -1,0 +1,32 @@
+name: Bug Report
+description: I would like to report an issue I have encountered.
+labels: ["bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before opening a new issue, take a moment to search through the current open and closed ones.
+      description: 'If you find a similar issue, kindly add a `👍️` reaction to it.'
+      options:
+        - label: This issue has not been previously reported.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: Please provide a detailed description of the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Please outline the steps to reproduce the issue.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+
+    validations:
+      required: true

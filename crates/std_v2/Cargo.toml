@@ -1,0 +1,17 @@
+[package]
+name = "std_v2"
+edition = "2024"
+
+[dependencies]
+emoji-printer = "~0.4.3"
+toml = "~0.8.20"
+dirs = "~6.0.0"
+serde = { version = "~1.0.217", features = ["derive"] }
+serde_derive = "~1.0.217"
+
+
+common = { path = "../common" }
+operation_derive = { path = "../operation_derive" }
+
+[lib]
+path = "src/lib.rs"

@@ -39,7 +39,7 @@
 <h2 id="contributing">🏗️ Contributing?</h2>
 
   It's **my** personal project to learn the Language. <br />
-  I would love to <a href="discussions/categories/your-thoughts">hear your thoughts</a> on it, but as of now I'm not looking for contributions.
+  I would love to <a href="https://github.com/drgndk/ctr/discussions/categories/your-thoughts">hear your thoughts</a> on it, but as of now I'm not looking for contributions.
 
   You can still report bugs or request features using the links above.
 

@@ -1,12 +1,10 @@
-use common::{console::Console, enum_gen, struct_gen};
+use common::{console::CONSOLE, enum_gen, struct_gen};
 use syn::{ Fields, Lit, Meta, NestedMeta };
-
-
 
 enum_gen! {
   pub enum FieldTypes use Clone {
-    HelpFlag,
-    VersionFlag,
+    Help,
+    Version,
     Variadic,
     Flag,
     LongFlag,
@@ -40,7 +38,7 @@ struct_gen! {
               }
             },
             ident_name => {
-              Console::new().panic(format!("\"{ident_name}\" is not a valid OperationInfo attribute"));
+              CONSOLE.panic(format!("\"{ident_name}\" is not a valid OperationInfo attribute"));
             }
           }
         }
@@ -67,7 +65,7 @@ struct_gen! {
 
         let meta = attr.parse_meta();
         if let Err(_) = meta {
-          Console::new().panic("Unexpected attribute meta");
+          CONSOLE.panic("Unexpected attribute meta");
         }
 
         if let Meta::List(meta_list) = meta.unwrap() {
@@ -133,7 +131,7 @@ struct_gen! {
             });
           }
         },
-        Fields::Unit => panic!("Unit struct not supported"),
+        Fields::Unit => CONSOLE.panic("Unit struct not supported"),
       };
 
       field_list

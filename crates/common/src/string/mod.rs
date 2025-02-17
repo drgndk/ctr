@@ -4,7 +4,7 @@ pub mod buffer;
 use std::{fmt::{Display, Formatter}, slice::{Iter, IterMut}, string::FromUtf8Error, vec::IntoIter};
 
 use ansi::{Effect, EffectArray};
-use crate::{enum_gen, struct_gen};
+use crate::{console::CONSOLE, enum_gen, struct_gen};
 use buffer::Buffer;
 
 #[allow(dead_code)]
@@ -114,7 +114,7 @@ struct_gen! {
 
   impl Into<String> {
     fn into(self: Self) -> String {
-      String::from("test")
+      self.to_string()
     }
   }
 
@@ -167,9 +167,8 @@ struct_gen! {
     }
 
     pub fn push(self: &mut Self, byte: impl Into<char>) {
-      match self.buffer_mut().push_safe(byte) {
-        Ok(_) => {}
-        Err(err) => panic!("{err}")
+      if let Err(err) = self.buffer_mut().push_safe(byte.into() as u8) {
+        CONSOLE.panic(format!("{err}"))
       }
     }
 
@@ -391,11 +390,11 @@ struct_gen! {
                 if let Some(effect) = Effect::try_from(&tag) {
                   if last_effect.ne(&effect) {
                     if last_pos.is_none() {
-                      panic!("You're trying to close the tag </{tag}> before opening it.\nWhich is illegal");
+                      CONSOLE.panic(format!("You're trying to close the tag </{tag}> before opening it.\nWhich is illegal"));
                     }
 
                     let last_tag = last_effect.clone().to_string().to_lowercase();
-                    panic!("You're trying to close the tag </{tag}> before </{last_tag}>.\nWhich is illegal");
+                    CONSOLE.panic(format!("You're trying to close the tag </{tag}> before </{last_tag}>.\nWhich is illegal"));
                   }
                 }
               }
@@ -769,7 +768,7 @@ struct_gen! {
       let string = s.into();
       match self.buffer_mut().try_reserve(string.len()) {
         Ok(_) => self.bytes_mut().extend_from_slice(string.as_bytes()),
-        Err(err) => panic!("{err}")
+        Err(err) => CONSOLE.panic(format!("{err}"))
       }
     }
   }

@@ -40,11 +40,12 @@
 #[macro_export]
 macro_rules! enum_gen {
   (
-    $(#[ $impl_attribute:meta ])*
-    $pub_struct:vis enum $struct:ident $(use $($structs:ident),*)? {
+    $(/$(/)* $($doc_comments:tt)*)*
+    $(#[ $enum_attribute:meta ])*
+    $visibility:vis enum $enum_name:ident $(use $($derive_traits:ident),*)? {
       $(
-        $(#[ $($named_attribute:meta),* ])?
-        $named_name:ident $(
+        $(#[ $($variant_attribute:meta),* ])?
+        $variant_name:ident $(
           {$(
             let $field_name:ident: $field_type:ty = $field_default:expr;
           )*}
@@ -53,15 +54,15 @@ macro_rules! enum_gen {
     }
 
     $(
-      impl $mod_ident:ident$(<$($fn_type:ty),*>)? {
+      impl $impl_trait:ident$(<$($impl_generics:ty),*>)? {
         $(
-          type $type_name:ident = $type_type:ty;
+          type $associated_type_name:ident = $associated_type:ty;
         )*
         $(
           const $const_name:ident: $const_type:ty = $const_value:expr;
         )*
         $(
-          fn $fn_name:ident$(<$($fn_generic:ident$(: $fn_generic_type:ty)?),*>)?($($fn_argument:ident: $arg_type:ty),*) $(-> $fn_return:ty)? $fn_block:block
+          fn $fn_name:ident$(<$($fn_generic_param:ident$(: $fn_generic_bound:ident)?),*>)?($($fn_arg_name:ident: $fn_arg_type:ty),*) $(-> $fn_return_type:ty)? $fn_body:block
         )*
       }
     )*
@@ -69,31 +70,32 @@ macro_rules! enum_gen {
     $(
       mod $($_:ident)? {
         $(
-          $mod_pub:vis fn $mod_fn_name:ident$(<$($mod_fn_generic:ident$(: $mod_fn_generic_type:ty)?),*>)?($($mod_fn_argument:ident: $mod_arg_type:ty),*) $(-> $mod_fn_return:ty)? $mod_fn_block:block
+          $mod_visibility:vis fn $mod_fn_name:ident$(<$($mod_fn_generic_param:ident$(: $mod_fn_generic_bound:ident)?),*>)?($($mod_fn_arg_name:ident: $mod_fn_arg_type:ty),*) $(-> $mod_fn_return_type:ty)? $mod_fn_body:block
         )*
       }
     )*
   ) => {
+    $(/$(/)* $($doc_comments)*)*
     #[derive(Debug)]
-    $(#[derive($($structs),*)])?
-    $(#[$impl_attribute])*
+    $(#[derive($($derive_traits),*)])?
+    $(#[$enum_attribute])*
     #[allow(dead_code)]
-    $pub_struct enum $struct {
+    $visibility enum $enum_name {
       $(
-        $($(#[$named_attribute])*)?
-        $named_name $({
+        $($(#[$variant_attribute])*)?
+        $variant_name $({
           $($field_name: $field_type),*
         })?
       ),*
     }
 
-    impl $struct {
+    impl $enum_name {
       #[allow(unused_variables)]
       #[allow(dead_code)]
       pub fn to_string(self) -> String {
         match self {
           $(
-            Self::$named_name $({ $($field_name),* })? => stringify!($named_name),
+            Self::$variant_name $({ $($field_name),* })? => stringify!($variant_name),
           )*
         }.to_string()
       }
@@ -103,14 +105,14 @@ macro_rules! enum_gen {
         let string = string.into();
         match string.to_lowercase() {
           $(
-            s if s.eq(&stringify!($named_name).to_lowercase()) => Some(Self::$named_name $({ $($field_name: $field_default),* })?),
+            s if s.eq(&stringify!($variant_name).to_lowercase()) => Some(Self::$variant_name $({ $($field_name: $field_default),* })?),
           )*
           _ => None,
         }
       }
     }
 
-    impl From<&str> for $struct {
+    impl From<&str> for $enum_name {
       fn from(string: &str) -> Self {
         if let Some(effect) = Self::try_from(string) {
           return effect;
@@ -121,37 +123,36 @@ macro_rules! enum_gen {
       }
     }
 
-    impl From<&String> for $struct {
+    impl From<&String> for $enum_name {
       fn from(string: &String) -> Self {
         Self::from(string.as_str())
       }
     }
 
-    impl From<String> for $struct {
+    impl From<String> for $enum_name {
       fn from(string: String) -> Self {
         Self::from(&string)
       }
     }
 
-
     $(
-      impl $mod_ident$(<$($fn_type),*>)? for $struct {
+      impl $impl_trait$(<$($impl_generics),*>)? for $enum_name {
         $(
-          type $type_name = $type_type;
+          type $associated_type_name = $associated_type;
         )*
         $(
           const $const_name: $const_type = $const_value;
         )*
         $(
-          fn $fn_name$(<$($fn_generic$(: $fn_generic_type)?),*>)?($($fn_argument: $arg_type),*) $(-> $fn_return)? $fn_block
+          fn $fn_name$(<$($fn_generic_param$(: $fn_generic_bound)?),*>)?($($fn_arg_name: $fn_arg_type),*) $(-> $fn_return_type)? $fn_body
         )*
       }
     )*
 
     $(
       $(
-        impl $struct {
-          $mod_pub fn $mod_fn_name$(<$($mod_fn_generic$(: $mod_fn_generic_type)?),*>)?($($mod_fn_argument: $mod_arg_type),*) $(-> $mod_fn_return)? $mod_fn_block
+        impl $enum_name {
+          $mod_visibility fn $mod_fn_name$(<$($mod_fn_generic_param$(: $mod_fn_generic_bound)?),*>)?($($mod_fn_arg_name: $mod_fn_arg_type),*) $(-> $mod_fn_return_type)? $mod_fn_body
         }
       )*
     )*

@@ -7,7 +7,6 @@ emoji-printer = "~0.4.3"
 toml = "~0.8.20"
 dirs = "~6.0.0"
 serde = { version = "~1.0.217", features = ["derive"] }
-serde_derive = "~1.0.217"
 
 
 common = { path = "../common" }

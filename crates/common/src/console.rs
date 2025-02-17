@@ -251,10 +251,10 @@ struct_gen! {
         }
       };
 
-      let usage = usage_command.map_or(command_name, |e| format!("<black bright>{e}</black bright>"));
+      let usage = usage_command.map_or(command_name, |e| format!("<brightblack>{e}</brightblack>"));
       self.print(format!("<bold>USAGE</bold>\n{usage} {command}"));
     }
   }
 }
 
-pub const CONSOLE: LazyLock<Console> = LazyLock::new(|| Console::new());
+pub static CONSOLE: LazyLock<Console> = LazyLock::new(|| Console::new());

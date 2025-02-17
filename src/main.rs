@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, string::StringV2, NAME};
 use std_v2::{derive::Command, struct_gen};
 use clap::{error::{ContextKind, ErrorKind}, Parser, Subcommand};
@@ -6,8 +8,27 @@ mod subcommand;
 
 use subcommand::help::Options as HelpCommand;
 use subcommand::version::Options as VersionCommand;
+use subcommand::upgrade::Options as UpgradeCommand;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub fn get_version() -> String {
+  #[allow(unused_mut)]
+  let mut ver = VERSION.to_string();
+
+  #[cfg(debug_assertions)]
+  ver.push_str("-dev");
+
+  if let Ok(output) = Command::new("git").args(&["rev-parse", "--short", "HEAD"]).output() {
+    if output.status.success() {
+      if let Ok(commit_hash) = String::from_utf8(output.stdout) {
+        ver.push_str(&format!("+{}", commit_hash.trim()));
+      }
+    }
+  }
+
+  ver
+}
 
 #[derive(Debug, Subcommand, Command)]
 #[non_exhaustive]
@@ -16,6 +37,9 @@ pub enum Commands {
   Help(HelpCommand),
   #[subcommand("Show the current version of compass")]
   Version(VersionCommand),
+  #[subcommand("Upgrade to the latest version")]
+  Upgrade(UpgradeCommand),
+
   #[command(external_subcommand)]
   External(Vec<String>),
 }
@@ -37,10 +61,10 @@ struct_gen! {
     #[command(subcommand)]
     let command: Option<Commands> = None;
 
-    #[arg(short, long), help_flag]
+    #[arg(short, long), help]
     let help: bool = false;
 
-    #[arg(short, long), version_flag]
+    #[arg(short, long), version]
     let version: bool = false;
   }
 
@@ -48,17 +72,9 @@ struct_gen! {
     const NAME: &'static str = "ctr";
 
     fn usage(status: i32) {
-      let version = {
-        #[allow(unused_mut)]
-        let mut ver = VERSION.to_string();
-
-        #[cfg(debug_assertions)]
-        ver.push_str("-dev");
-
-        ver
-      };
       CONSOLE.print(format!(
         "{desc} <brightblack>(v{version})</brightblack>\n",
+        version = get_version(),
         desc = env!("CARGO_PKG_DESCRIPTION").replace("ctr", "<magenta>ctr</magenta>")
       ));
 
@@ -86,18 +102,9 @@ struct_gen! {
       }));
 
       if self.command.is_none() {
-        let version = {
-          #[allow(unused_mut)]
-          let mut ver = VERSION.to_string();
-
-          #[cfg(debug_assertions)]
-          ver.push_str("-dev");
-
-          ver
-        };
-
         CONSOLE.print(format!(
           "{desc} <brightblack>(v{version})</brightblack>\n",
+          version = get_version(),
           desc = env!("CARGO_PKG_DESCRIPTION").replace("ctr", "<magenta>ctr</magenta>")
         ));
         CONSOLE.print(format!("Use <magenta>{} help</magenta> for additional information", NAME.to_lowercase()));
@@ -109,6 +116,7 @@ struct_gen! {
         match command {
           Commands::Help(options) => execute_command(options),
           Commands::Version(options) => execute_command(options),
+          Commands::Upgrade(options) => execute_command(options),
           Commands::External(args) => {
             let arg0_default = String::new();
             let arg0 = args.first().unwrap_or(&arg0_default);

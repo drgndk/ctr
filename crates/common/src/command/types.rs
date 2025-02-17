@@ -20,8 +20,7 @@ enum_gen! {
     }
   }
 
-  mod {
-
+  mod implementation {
     pub fn name(self: &Self) -> String {
       match self {
         Self::Flag { name, .. } => name.clone(),

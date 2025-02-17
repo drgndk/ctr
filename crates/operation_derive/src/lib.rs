@@ -5,7 +5,7 @@ use syn::{parse_macro_input, Data, DeriveInput};
 mod field;
 use field::{Field, FieldTypes};
 
-#[proc_macro_derive(Command, attributes(version_flag, help_flag, flag, long_flag, variadic, operation, subcommand))]
+#[proc_macro_derive(Command, attributes(version, help, flag, long_flag, variadic, operation, subcommand))]
 pub fn operation_info_derive(input: TokenStream) -> TokenStream {
   let input = parse_macro_input!(input as DeriveInput);
 
@@ -25,7 +25,7 @@ pub fn operation_info_derive(input: TokenStream) -> TokenStream {
         let field_name = variant_name.to_lowercase();
         let mut field = Field::new();
         field.name = field_name;
-        field.from_attributes(&variant.attrs);quote! { subcommand::#variant_name::Options::NAME };
+        field.from_attributes(&variant.attrs);
         fields.push(field);
       }
 
@@ -49,17 +49,17 @@ pub fn operation_info_derive(input: TokenStream) -> TokenStream {
     let about = field.about();
 
     match field.field_type() {
-      FieldTypes::HelpFlag => essential.push(quote! { common::command::Command::help_flag() }),
-      FieldTypes::VersionFlag => essential.push(quote! { common::command::Command::version_flag() }),
+      FieldTypes::Help => essential.push(quote! { common::command::Command::help_flag() }),
+      FieldTypes::Version => essential.push(quote! { common::command::Command::version_flag() }),
       FieldTypes::Variadic => variadics.push(quote! { common::command::Command::variadic(#name, #about) }),
       FieldTypes::Flag => {
         flags.push(
           if let Some(example) = field.example() {
-          let example = example.as_str();
-          quote! { common::command::Command::option(#name, #example, #about) }
-        } else {
-          quote! { common::command::Command::flag(#name, #about) }
-        }
+            let example = example.as_str();
+            quote! { common::command::Command::option(#name, #example, #about) }
+          } else {
+            quote! { common::command::Command::flag(#name, #about) }
+          }
         );
       },
       FieldTypes::LongFlag => {
@@ -87,16 +87,18 @@ pub fn operation_info_derive(input: TokenStream) -> TokenStream {
     }
   }
 
-  TokenStream::from(quote! {
-    impl #name {
-      pub fn operations() -> Vec<Vec<common::command::Command>> {
-        vec![
-          vec![#(#essential),*],
-          vec![#(#operations),*],
-          vec![#(#flags),*],
-          vec![#(#variadics),*]
-        ]
+  TokenStream::from(
+    quote! {
+      impl #name {
+        pub fn operations() -> Vec<Vec<common::command::Command>> {
+          vec![
+            vec![#(#essential),*],
+            vec![#(#operations),*],
+            vec![#(#flags),*],
+            vec![#(#variadics),*]
+          ]
+        }
       }
     }
-  })
+  )
 }

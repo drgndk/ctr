@@ -2,6 +2,7 @@ use common::console::CONSOLE;
 
 pub mod help;
 pub mod version;
+pub mod upgrade;
 
 #[allow(dead_code)]
 pub fn check_conflicts(args: Vec<(&str, bool)>) {

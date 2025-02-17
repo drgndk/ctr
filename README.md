@@ -17,7 +17,7 @@
   </h3>
 </div>
 <div id="links" align="center">
-  A cute CLI tool to control your system. <br /> <br />
+  A cute companion for your system. <br /> <br />
   <a href="https://github.com/drgndk/ctr/issues/new?labels=bug&template=bug.yml">Report Bug</a> &middot;
   <a href="https://github.com/drgndk/ctr/issues/new?labels=enhancement&template=feature.yml">Request Feature</a>
 </div>
@@ -47,3 +47,8 @@
 
   This project is licensed under the MIT License. <br /> <br />
   You are free to use, modify, and distribute it under the terms of this license.
+
+<h2 id="updates">📅 Updates Schedule</h2>
+
+  I don't have a fixed schedule for updates. <br />
+  But I'll try to release updates at least once every week or two.

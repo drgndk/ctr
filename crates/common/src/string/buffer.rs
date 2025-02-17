@@ -1,6 +1,5 @@
 use std::{slice::Iter, string::FromUtf8Error};
 
-#[cfg(debug_assertions)]
 use crate::console::CONSOLE;
 use crate::{string::StringV2, struct_gen};
 
@@ -297,7 +296,7 @@ struct_gen! {
         }
 
         #[cfg(not(debug_assertions))]
-        panic!("Attempted to push a byte into a full buffer. Consider using Buffer::push_safe() or Buffer::try_reserve() instead.");
+        CONSOLE.panic("Attempted to push a byte into a full buffer. Consider using Buffer::push_safe() or Buffer::try_reserve() instead.");
       }
 
       let char_byte = byte.into();

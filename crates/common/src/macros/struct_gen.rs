@@ -35,7 +35,7 @@
 #[macro_export]
 macro_rules! struct_gen {
   (
-    // $(/$(/)* $($doc_comments:tt)*)*
+    $(/$(/)* $($doc_comments:tt)*)*
     $(#[ $struct_attribute:meta ])*
     $struct_visibility:vis$(($struct_crate_visibility:vis))? struct $struct_name:ident$(< $($generic_param:ident$(: $generic_constraint:ident)?$(= $generic_default:tt)?),* >)? $(use $($derive_trait:ident),*)? {
       $(
@@ -67,7 +67,7 @@ macro_rules! struct_gen {
       }
     )*
   ) => {
-    // $(/$(/)* $($doc_comments)*)*
+    $(/$(/)* $($doc_comments)*)*
     #[derive(Debug)]
     $(#[derive($($derive_trait),*)])?
     $(#[$struct_attribute])*

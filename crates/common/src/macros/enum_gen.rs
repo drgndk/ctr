@@ -42,7 +42,7 @@ macro_rules! enum_gen {
   (
     $(/$(/)* $($doc_comments:tt)*)*
     $(#[ $enum_attribute:meta ])*
-    $visibility:vis enum $enum_name:ident $(use $($derive_traits:ident),*)? {
+    $visibility:vis enum $enum_name:ident $(use $($($derive_trait:ident)::*),*)? {
       $(
         $(#[ $($variant_attribute:meta),* ])?
         $variant_name:ident $(
@@ -77,7 +77,7 @@ macro_rules! enum_gen {
   ) => {
     $(/$(/)* $($doc_comments)*)*
     #[derive(Debug)]
-    $(#[derive($($derive_traits),*)])?
+    $(#[derive($($($derive_trait)::*),*)])?
     $(#[$enum_attribute])*
     #[allow(dead_code)]
     $visibility enum $enum_name {

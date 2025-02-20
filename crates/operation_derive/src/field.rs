@@ -4,7 +4,6 @@ use syn::{ Fields, Lit, Meta, NestedMeta };
 enum_gen! {
   pub enum FieldTypes use Clone {
     Help,
-    Version,
     Variadic,
     Flag,
     LongFlag,

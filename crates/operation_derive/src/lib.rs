@@ -5,7 +5,7 @@ use syn::{parse_macro_input, Data, DeriveInput};
 mod field;
 use field::{Field, FieldTypes};
 
-#[proc_macro_derive(Command, attributes(version, help, flag, long_flag, variadic, operation, subcommand))]
+#[proc_macro_derive(Command, attributes(help, flag, long_flag, variadic, operation, subcommand))]
 pub fn operation_info_derive(input: TokenStream) -> TokenStream {
   let input = parse_macro_input!(input as DeriveInput);
 
@@ -50,7 +50,6 @@ pub fn operation_info_derive(input: TokenStream) -> TokenStream {
 
     match field.field_type() {
       FieldTypes::Help => essential.push(quote! { common::command::Command::help_flag() }),
-      FieldTypes::Version => essential.push(quote! { common::command::Command::version_flag() }),
       FieldTypes::Variadic => variadics.push(quote! { common::command::Command::variadic(#name, #about) }),
       FieldTypes::Flag => {
         flags.push(

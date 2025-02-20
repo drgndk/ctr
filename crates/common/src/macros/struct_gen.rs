@@ -37,7 +37,7 @@ macro_rules! struct_gen {
   (
     $(/$(/)* $($doc_comments:tt)*)*
     $(#[ $struct_attribute:meta ])*
-    $struct_visibility:vis$(($struct_crate_visibility:vis))? struct $struct_name:ident$(< $($generic_param:ident$(: $generic_constraint:ident)?$(= $generic_default:tt)?),* >)? $(use $($derive_trait:ident),*)? {
+    $struct_visibility:vis$(($struct_crate_visibility:vis))? struct $struct_name:ident$(< $($generic_param:ident$(: $generic_constraint:ident)?$(= $generic_default:tt)?),* >)? $(use $($($derive_trait:ident)::*),*)? {
       $(
         $(#[$($field_attribute:meta),*])*
         $field_visibility:vis$(($field_super_visibility:vis))? let $(&$field_mutability:ident)? $field_name:ident: $field_type:ty = $field_default:expr;
@@ -69,7 +69,7 @@ macro_rules! struct_gen {
   ) => {
     $(/$(/)* $($doc_comments)*)*
     #[derive(Debug)]
-    $(#[derive($($derive_trait),*)])?
+    $(#[derive($($($derive_trait)::*),*)])?
     $(#[$struct_attribute])*
     $struct_visibility$(($struct_crate_visibility))?  struct $struct_name$(<$($generic_param$(: $generic_constraint)?$(= $generic_default)?),*>)? {
       $(

@@ -27,29 +27,10 @@ struct_gen! {
     };
   }
 
-  mod custom_default_costructors {
+  mod preset_costructors {
     #[doc = "generate a Command struct for the `-h/--help` flag"]
     pub fn help_flag() -> Self {
-      Self {
-        example: None,
-        about: "Prints this message.".to_owned(),
-        command_type: CommandType::Flag {
-          short: 'h',
-          name: "help".to_owned(),
-        }
-      }
-    }
-
-    #[doc = "generate a Command struct for the `-v/--version` flag"]
-    pub fn version_flag() -> Self {
-      Self {
-        example: None,
-        about: "Prints the current version of compass.".to_owned(),
-        command_type: CommandType::Flag {
-          short: 'v',
-          name: "version".to_owned(),
-        }
-      }
+      Self::flag("help", "Prints this message.")
     }
   }
 
@@ -99,7 +80,7 @@ struct_gen! {
         command_type: CommandType::Flag {
           short: name.chars().next().unwrap_or_else(|| {
             panic!("`short` cannot be empty.");
-          }),
+          }).to_ascii_uppercase(),
           name,
         }
       }

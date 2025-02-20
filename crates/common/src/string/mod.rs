@@ -276,7 +276,7 @@ struct_gen! {
 
   mod ansi_implementations {
     pub fn render_ansi(self: &Self) -> Self {
-      if let Ok(_) = std::env::var("NO_COLOR") {
+      if std::env::var("NO_COLOR").is_ok() {
         return self.strip_ansi();
       }
 
@@ -352,6 +352,11 @@ struct_gen! {
           },
           '<' => {
             if let Some(next) = iter.peek() {
+              if next == &'>' {
+                result.push_str("<>");
+                continue;
+              }
+
               if next == &'<' {
                 result.push('<');
                 while let Some(&next_ch) = iter.peek() {

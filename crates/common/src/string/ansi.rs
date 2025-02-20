@@ -21,7 +21,7 @@ struct_gen! {
   mod vec_functions {
     pub fn push(self: &mut Self, effect: Effect) {
       // If the NO_COLOR environment variable is set, don't add any effects.
-      if let Ok(_) = std::env::var("NO_COLOR") {
+      if std::env::var("NO_COLOR").is_ok() {
         return;
       }
 

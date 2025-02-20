@@ -14,7 +14,7 @@ body:
     id: description
     attributes:
       label: Issue Description
-      description: Please provide a detailed description of the issue.
+      description: Please provide a detailed description of the issue and explain what you expected to happen.
     validations:
       required: true
 

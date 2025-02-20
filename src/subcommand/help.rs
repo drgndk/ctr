@@ -1,11 +1,9 @@
 use clap::Args;
 use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen};
-use std_v2::derive::Command;
 
 struct_gen! {
-  pub struct Options use Args, Command {
-    #[arg(short, long)]
-    #[help]
+  pub struct Options use Args, std_v2::derive::Command {
+    #[arg(short = 'H', long), help]
     pub let help: bool = false;
   }
 

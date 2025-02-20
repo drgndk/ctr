@@ -1,12 +1,14 @@
-use std::{path::Path, process::Command};
+use std::{path::Path, process::{Command, ExitStatus}};
 
 use clap::Args;
 use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen};
 use reqwest::blocking::Client;
 use semver::Version;
-use std_v2::derive::Command;
+use std_v2::{INSTALL_DIR, REPO_DIR};
 
 use crate::{NAME, VERSION};
+
+use super::check_conflicts;
 
 #[derive(serde::Deserialize)]
 struct CargoPackage {
@@ -19,14 +21,19 @@ struct CargoToml {
 }
 
 struct_gen! {
-  pub struct Options use Args, Command {
-    #[arg(short, long)]
-    #[help]
+  pub struct Options use Args, std_v2::derive::Command {
+    #[arg(short = 'H', long), help]
     pub let help: bool = false;
+
+    #[arg(short = 'C', long), flag("Check for updates without updating")]
+    pub let check: bool = false;
+
+    #[arg(short = 'F', long), flag("Force the upgrade, even if the current version is the latest")]
+    pub let force: bool = false;
   }
 
   impl Operation {
-    const NAME: &'static str = "update";
+    const NAME: &'static str = "upgrade";
 
     fn usage(status: i32) {
       CONSOLE.print_usage::<Self>(vec![ArgumentType::Flags]);
@@ -35,17 +42,40 @@ struct_gen! {
     }
 
     fn main(self: &Self) -> std::io::Result<()> {
+      (self.help).then(|| Self::usage(0));
+
       match self.fetch_versions() {
         Ok((latest, current)) => {
-          if latest > current {
-            CONSOLE.print(format!("<brightmagenta>A new version of <italic>{NAME}</italic> is available: <bold><white>{latest}</white></bold></brightmagenta>\n"));
-            self.download_update();
+          if latest > current || self.force {
+            if self.force {
+              self.download_update();
+            } else {
+              CONSOLE.print(format!("<brightmagenta>A new version of <italic>{NAME}</italic> is available: <bold><white>{latest}</white></bold></brightmagenta>"));
+              if !self.check {
+                println!();
+                self.download_update();
+              }
+            }
           } else {
             CONSOLE.print("<brightmagenta>Nice!</brightmagenta> You are already using the latest version");
+
+            // for script compatibility
+            if self.check {
+              std::process::exit(1);
+            }
           }
         },
         Err(err) => CONSOLE.error(format!("Unable to fetch the latest version: {err}"))
       }
+
+      Ok(())
+    }
+
+    fn validate(self: &Self) -> std::io::Result<()> {
+      check_conflicts(vec![
+        ("force", self.force),
+        ("check", self.check)
+      ]);
 
       Ok(())
     }
@@ -54,12 +84,11 @@ struct_gen! {
   mod implementation {
     fn fetch_versions(self: &Self) -> Result<(semver::Version, semver::Version), Box<dyn std::error::Error>> {
       let url = "https://raw.githubusercontent.com/drgndk/ctr/main/Cargo.toml";
-
-      let client = Client::new();
-      let response = match client.get(url).send() {
+      let response = match Client::new().get(url).send() {
         Ok(response) => response,
         Err(err) => CONSOLE.exit(format!("Failed to fetch the remote Cargo.toml: {err}"))
       };
+
       let cargo_toml_content = match response.text() {
         Ok(content) => content,
         Err(err) => CONSOLE.exit(format!("Failed to read the remote Cargo.toml: {err}"))
@@ -71,74 +100,76 @@ struct_gen! {
       };
 
       if let Ok(latest_version) = Version::parse(&cargo_toml.package.version) {
-        if let Ok(current_version) = Version::parse(VERSION) {
-          Ok((latest_version, current_version))
-        } else {
-          CONSOLE.exit("Failed to parse the current version");
-        }
+        let current_version = Version::parse(VERSION).unwrap_or_else(|_| CONSOLE.exit("Failed to parse the current version"));
+
+        Ok((latest_version, current_version))
       } else {
         CONSOLE.exit("Failed to parse the latest version");
       }
     }
 
     fn download_update(self: &Self) -> () {
+      let repo_path = &*REPO_DIR;
 
-      let current_exe = std::env::current_exe().expect("Failed to get current executable location");
-      let repo = Path::new(&current_exe).parent().unwrap().join("../../").canonicalize();
+      let git_cmd = |args: Vec<&'static str>| -> ExitStatus {
+        let mut cmd = Command::new("git");
+        cmd.current_dir(repo_path).args(["-C", repo_path.display().to_string().as_str()]).args(&args);
 
-      let repo = match repo {
-        Ok(path) => path,
-        Err(_) => CONSOLE.exit("Failed to get the repository path")
-      };
-
-      let repo_path = match repo.to_str() {
-        Some(path) => path,
-        None => CONSOLE.exit("Failed to get the repository path")
-      };
-
-      let preserve_pwd = match std::env::current_dir() {
-        Ok(pwd) => pwd,
-        Err(_) => CONSOLE.exit("Failed to get the current working directory")
-      };
-
-      if std::env::set_current_dir(repo_path).is_err() {
-        CONSOLE.exit("Unable to set pwd to the repository path");
-      } else {
-        if !repo.join(".git").exists() {
-          CONSOLE.exit("Codespace is not a git repository :(");
-        }
-
-        #[cfg(not(debug_assertions))] // Don't overwrite the current changes in debug builds
-        if let Err(err) = Command::new("git").arg("reset").arg("--hard").status() {
-          CONSOLE.exit(format!("{err}"));
-        }
-
-        if let Err(err) = Command::new("git").arg("pull").status() {
-          CONSOLE.exit(format!("{err}"));
-        }
-
-        if let Err(err) = Command::new("fish").arg("-c").arg("./scripts/build.fish").status() {
-          if err.kind() == std::io::ErrorKind::NotFound {
-            if let Err(err) = Command::new("cargo").arg("b").arg("-r").status() {
-              if err.kind() == std::io::ErrorKind::NotFound {
-                CONSOLE.exit("cargo not found???");
-              }
-
-              CONSOLE.exit("Failed to build ctr");
+        match cmd.status() {
+          Ok(status) => {
+            if !status.success() {
+              CONSOLE.exit(format!("Failed to execute the git {} command: Status: {status}", args.join(" ")));
             }
 
-            CONSOLE.warn("<brightyellow>ctr was built using cargo, but no symlink was created inside <white>/usr/bin</white></brightyellow>");
-          } else {
-            CONSOLE.exit("Failed to build the project");
+            status
+          },
+          Err(err) => CONSOLE.exit(format!("Failed to execute the git {} command: {err}", args.join(" ")))
+        }
+      };
+
+      if !repo_path.join(".git").exists() {
+        git_cmd(vec!["remote", "add", "origin", "https://github.com/drgndk/ctr.git"]);
+        git_cmd(vec!["branch", "-M", "main"]);
+      }
+
+      // Don't overwrite the current changes in debug builds
+      git_cmd(vec!["reset", "--hard"]);
+      git_cmd(vec!["pull"]);
+
+      if let Err(err) = Command::new("cargo").args(["b", "-r", "--manifest-path", REPO_DIR.join("Cargo.toml").display().to_string().as_str()]).current_dir(repo_path).status() {
+        if err.kind() == std::io::ErrorKind::NotFound {
+          CONSOLE.exit("<bold>Whoops! It seems like you don't have cargo installed.</bold> How strange...");
+        }
+
+        // if there is another error, cargo will print it
+        std::process::exit(1);
+      } else {
+        let old_binary_path = INSTALL_DIR.join("bin/ctr");
+        let new_binary_path = repo_path.join("target/release/ctr");
+
+        if old_binary_path.exists() {
+          if let Err(err) = std::fs::remove_file(&old_binary_path) {
+            CONSOLE.exit(format!("Failed to remove the old binary: {err}"));
           }
         }
 
-        if std::env::set_current_dir(&preserve_pwd).is_err()  {
-          CONSOLE.error("Failed to change back to the preserved pwd");
+        if let Err(err) = std::fs::copy(&new_binary_path, old_binary_path) {
+          CONSOLE.exit(format!("Failed to copy the new binary: {err}"));
         }
-
-        CONSOLE.print(format!("\n<brightmagenta><bold>Successfully</bold> updated <white>{NAME}</white> to the latest version</brightmagenta>"));
       }
+
+      let bin_path = &*INSTALL_DIR.join("bin/ctr");
+      if !Path::new(&bin_path).exists() {
+        let new_binary_path = repo_path.join(format!("target/release/{NAME}"));
+        if std::fs::rename(&new_binary_path, bin_path).is_err() {
+          println!();
+          CONSOLE.warn(format!("<brightyellow><white><bold>{NAME}</bold></white> was successfully built using cargo, but no symlink was created inside <white>{}</white></brightyellow>", bin_path.display()));
+          CONSOLE.warn("<brightyellow>to do that, you can run the following command: </brightyellow>");
+          CONSOLE.print(format!("<bold>sudo</bold> ln -s {target:?} {bin_path:?}", target = repo_path.join(format!("target/release/{NAME}")).display()));
+        }
+      }
+
+      CONSOLE.print(format!("\n<brightmagenta><bold>Successfully</bold> updated <white>{NAME}</white> to the latest version</brightmagenta>"));
     }
   }
 }

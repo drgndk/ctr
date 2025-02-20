@@ -22,18 +22,11 @@
   <a href="https://github.com/drgndk/ctr/issues/new?labels=enhancement&template=feature.yml">Request Feature</a>
 </div>
 
-<h2 id="building">🔨 Installing</h2>
+<h2 id="installing">🔨 Installing</h2>
 
-  ```
-  git clone https://github.com/drgndk/ctr.git
-  cd ctr
-
-  # requires fish shell.
-  # Builds the binary and creates a symlink to /usr/bin/ctr
-  ./scripts/build.fish
-
-  # or
-  cargo build --release
+  ```sh
+  # Requires `fish` shell.
+  curl -sSL https://drgndk.github.io/install.fish | fish
   ```
 
 <h2 id="contributing">🏗️ Contributing?</h2>
@@ -52,3 +45,6 @@
 
   I don't have a fixed schedule for updates. <br />
   But I'll try to release updates at least once every week or two.
+
+  Potential updates will roll out whenever any Iteration is completed. <br />
+  You can check the [Project Board](https://github.com/users/drgndk/projects/5/views/4) for the current status.

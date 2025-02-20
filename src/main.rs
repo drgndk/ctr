@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, string::StringV2, NAME};
-use std_v2::{derive::Command, struct_gen};
+use std_v2::{derive::Command, struct_gen, REPO_DIR, CONFIG_DIR, IS_DEBUG};
 use clap::{error::{ContextKind, ErrorKind}, Parser, Subcommand};
 
 mod subcommand;
@@ -9,6 +9,7 @@ mod subcommand;
 use subcommand::help::Options as HelpCommand;
 use subcommand::version::Options as VersionCommand;
 use subcommand::upgrade::Options as UpgradeCommand;
+use subcommand::run::Options as RunCommand;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -16,12 +17,12 @@ pub fn get_version() -> String {
   #[allow(unused_mut)]
   let mut ver = VERSION.to_string();
 
-  #[cfg(debug_assertions)]
-  ver.push_str("-dev");
-
-  if let Ok(output) = Command::new("git").args(&["rev-parse", "--short", "HEAD"]).output() {
+  // Debug builds should have a "-dev", and release builds should have a "+<commit hash>" suffix
+  if IS_DEBUG {
+    ver.push_str("-dev");
+  } else if let Ok(output) = Command::new("git").current_dir(&*REPO_DIR).args(["-C", REPO_DIR.display().to_string().as_str(), "rev-parse", "--short", "HEAD"]).output() {
     if output.status.success() {
-      if let Ok(commit_hash) = String::from_utf8(output.stdout) {
+      if let Ok(commit_hash) = String::from_utf8(output.stdout.clone()) {
         ver.push_str(&format!("+{}", commit_hash.trim()));
       }
     }
@@ -35,11 +36,12 @@ pub fn get_version() -> String {
 pub enum Commands {
   #[subcommand("Show this message")]
   Help(HelpCommand),
-  #[subcommand("Show the current version of compass")]
+  #[subcommand("Show the current version")]
   Version(VersionCommand),
   #[subcommand("Upgrade to the latest version")]
   Upgrade(UpgradeCommand),
-
+  #[subcommand("Run a command")]
+  Run(RunCommand),
   #[command(external_subcommand)]
   External(Vec<String>),
 }
@@ -50,33 +52,39 @@ pub fn execute_command<Command: Operation>(command: &Command) {
       if let Err(e) = command.main() {
         CONSOLE.panic(format!("{e}"));
       }
+
+      std::process::exit(0);
     },
     Err(e) => CONSOLE.panic(format!("{e}"))
   }
 }
 
+pub fn print_slogan() {
+  CONSOLE.print(format!(
+    "{desc} <brightblack>(v{version})</brightblack>\n",
+    version = get_version(),
+    desc = env!("CARGO_PKG_DESCRIPTION").replace(NAME, &format!("<magenta>{NAME}</magenta>"))
+  ));
+}
+
 struct_gen! {
-  #[command(name = "compass", disable_help_flag = true, disable_help_subcommand = true, subcommand_required = false)]
+  #[command(name = NAME, disable_help_flag = true, disable_help_subcommand = true, subcommand_required = false)]
   pub struct Options use Parser, Command {
     #[command(subcommand)]
     let command: Option<Commands> = None;
 
-    #[arg(short, long), help]
+    #[arg(short = 'H', long), help]
     let help: bool = false;
 
-    #[arg(short, long), version]
+    #[arg(short = 'V', long), flag("Show the current version")]
     let version: bool = false;
   }
 
   impl Operation {
-    const NAME: &'static str = "ctr";
+    const NAME: &'static str = NAME;
 
     fn usage(status: i32) {
-      CONSOLE.print(format!(
-        "{desc} <brightblack>(v{version})</brightblack>\n",
-        version = get_version(),
-        desc = env!("CARGO_PKG_DESCRIPTION").replace("ctr", "<magenta>ctr</magenta>")
-      ));
+      print_slogan();
 
       CONSOLE.print_usage::<Options>(vec![
         ArgumentType::Flags,
@@ -97,16 +105,10 @@ struct_gen! {
 
     fn main(self: &Self) -> std::io::Result<()> {
       self.help.then(|| Self::usage(0));
-      self.version.then(|| execute_command(&VersionCommand {
-        help: false
-      }));
+      self.version.then(|| execute_command(&VersionCommand::new()));
 
       if self.command.is_none() {
-        CONSOLE.print(format!(
-          "{desc} <brightblack>(v{version})</brightblack>\n",
-          version = get_version(),
-          desc = env!("CARGO_PKG_DESCRIPTION").replace("ctr", "<magenta>ctr</magenta>")
-        ));
+        print_slogan();
         CONSOLE.print(format!("Use <magenta>{} help</magenta> for additional information", NAME.to_lowercase()));
 
         std::process::exit(0);
@@ -117,6 +119,8 @@ struct_gen! {
           Commands::Help(options) => execute_command(options),
           Commands::Version(options) => execute_command(options),
           Commands::Upgrade(options) => execute_command(options),
+          Commands::Run(options) => execute_command(options),
+
           Commands::External(args) => {
             let arg0_default = String::new();
             let arg0 = args.first().unwrap_or(&arg0_default);
@@ -202,5 +206,10 @@ fn run(argv: Vec<String>) {
 }
 
 fn main() {
+  if !CONFIG_DIR.exists() {
+    std::fs::create_dir_all(&*CONFIG_DIR).unwrap();
+  }
+
+
   run(std::env::args().collect::<Vec<String>>());
 }

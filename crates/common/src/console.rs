@@ -64,13 +64,17 @@ struct_gen! {
 
     #[cfg(debug_assertions)]
     pub fn dir(self: &Self, message: impl std::fmt::Debug) {
-      self.debug(format!("{:?}", message));
+      self.debug(format!("{:#?}", message));
     }
   }
 
   mod implementations {
     pub fn print(self: &Self, message: impl Into<String>) {
       println!("{}", StringV2::from(message.into()));
+    }
+
+    pub fn eprint(self: &Self, message: impl Into<String>) {
+      eprintln!("{}", StringV2::from(message.into()));
     }
 
     pub fn assert(self: &Self, condition: bool, message: impl Into<String>) {
@@ -89,7 +93,7 @@ struct_gen! {
 
     pub fn log(self: &Self, message: impl Into<String>) {
       let prefix = self.generate_tag("LOG", "black", "brightblue");
-      eprintln!("{prefix} {}", StringV2::from(message.into()));
+      println!("{prefix} {}", StringV2::from(message.into()));
     }
 
     pub fn warn(self: &Self, message: impl Into<String>) {

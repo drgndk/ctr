@@ -53,7 +53,7 @@ struct_gen! {
       let config_path = &*CONFIG_DIR.join(format!("binaries/{}.toml", self.args()[0]));
       let mut default_config = LaunchConfig::new();
 
-      if self.ignore_config || config_path.exists() {
+      if self.ignore_config || !config_path.exists() {
         if !self.args.is_empty() && default_config.general.command.is_none() {
           default_config.general.command = Some(self.args.join(" "));
         }

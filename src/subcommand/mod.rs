@@ -4,6 +4,7 @@ pub mod help;
 pub mod version;
 pub mod upgrade;
 pub mod run;
+pub mod info;
 
 #[allow(dead_code)]
 pub fn check_conflicts(args: Vec<(&str, bool)>) {

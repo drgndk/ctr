@@ -93,7 +93,7 @@ struct_gen! {
 
     pub fn log(self: &Self, message: impl Into<String>) {
       let prefix = self.generate_tag("LOG", "black", "brightblue");
-      println!("{prefix} {}", StringV2::from(message.into()));
+      eprintln!("{prefix} {}", StringV2::from(message.into()));
     }
 
     pub fn warn(self: &Self, message: impl Into<String>) {

@@ -1,4 +1,4 @@
-use std::{path::Path, process::Command};
+use std::{os::unix::process::CommandExt, path::Path, process::Command};
 
 use clap::Args;
 use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen, NAME};
@@ -6,6 +6,7 @@ use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct
 mod ser;
 use ser::*;
 use std_v2::CONFIG_DIR;
+use users::get_group_by_name;
 
 struct_gen! {
   pub struct Options use Args, std_v2::derive::Command {
@@ -48,6 +49,36 @@ struct_gen! {
     }
   }
 
+  mod utils {
+    fn get_group_id(self: &Self, group: &Option<String>) -> Option<u32> {
+      if let Some(group) = group {
+        if let Ok(gid) = group.parse::<u32>() {
+          return Some(gid);
+        }
+
+        if let Some(group) = get_group_by_name(group.as_str()) {
+          return Some(group.gid());
+        }
+      }
+
+      None
+    }
+
+    fn get_user_id(self: &Self, user: &Option<String>) -> Option<u32> {
+      if let Some(user) = user {
+        if let Ok(uid) = user.parse::<u32>() {
+          return Some(uid);
+        }
+
+        if let Some(user) = users::get_user_by_name(user.as_str()) {
+          return Some(user.uid());
+        }
+      }
+
+      None
+    }
+  }
+
   mod implementation {
     pub fn get_configs(self: &Self) -> LaunchConfig {
       let config_path = &*CONFIG_DIR.join(format!("binaries/{}.toml", self.args()[0]));
@@ -76,7 +107,31 @@ struct_gen! {
 
     pub fn launch(self: &Self, options: &LaunchOptions) -> std::io::Result<()>  {
       let args = {
-        let mut args = vec![std::env::var("SHELL").unwrap_or("bash".to_owned()), "-c".to_owned()];
+        let mut args = vec![options.shell.to_owned(), "-c".to_owned()];
+
+        if let Some(ref run_as) = options.run_as {
+          if run_as.sudo.unwrap_or(false) {
+            let sudo_cmd = {
+              let mut sudo = vec!["sudo".to_owned()];
+
+              if let Some(user) = run_as.user.as_ref() {
+                sudo.extend(vec!["-u".to_owned(), user.to_owned()]);
+              }
+
+              if let Some(group) = run_as.group.as_ref() {
+                sudo.extend(vec!["-g".to_owned(), group.to_owned()]);
+              }
+
+              sudo.push("--".to_owned());
+
+              sudo
+            };
+
+            for (i, arg) in sudo_cmd.iter().enumerate() {
+              args.insert(i, arg.to_owned());
+            }
+          }
+        }
 
         args.push(
           if options.daemonize {
@@ -90,6 +145,19 @@ struct_gen! {
 
       if let Some(binary) = args.first() {
         let mut command = Command::new(binary);
+
+        if let Some(ref run_as) = options.run_as {
+          if !run_as.sudo.unwrap_or(false) {
+            if let Some(gid) = self.get_group_id(&run_as.group) {
+              command.gid(gid);
+            }
+
+            if let Some(uid) = self.get_user_id(&run_as.user) {
+              command.gid(uid);
+            }
+          }
+        }
+
         command.args(&args[1..]);
 
         if self.silent {

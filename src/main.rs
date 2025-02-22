@@ -10,6 +10,7 @@ use subcommand::help::Options as HelpCommand;
 use subcommand::version::Options as VersionCommand;
 use subcommand::upgrade::Options as UpgradeCommand;
 use subcommand::run::Options as RunCommand;
+use subcommand::info::Options as InfoCommand;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -22,7 +23,7 @@ pub fn get_version() -> String {
     ver.push_str("-dev");
   } else if let Ok(output) = Command::new("git").current_dir(&*REPO_DIR).args(["-C", REPO_DIR.display().to_string().as_str(), "rev-parse", "--short", "HEAD"]).output() {
     if output.status.success() {
-      if let Ok(commit_hash) = String::from_utf8(output.stdout.clone()) {
+      if let Ok(commit_hash) = String::from_utf8(output.stdout) {
         ver.push_str(&format!("+{}", commit_hash.trim()));
       }
     }
@@ -42,6 +43,8 @@ pub enum Commands {
   Upgrade(UpgradeCommand),
   #[subcommand("Run a command")]
   Run(RunCommand),
+  #[subcommand("Show information about the system")]
+  Info(InfoCommand),
   #[command(external_subcommand)]
   External(Vec<String>),
 }
@@ -107,40 +110,42 @@ struct_gen! {
       self.help.then(|| Self::usage(0));
       self.version.then(|| execute_command(&VersionCommand::new()));
 
-      if self.command.is_none() {
-        print_slogan();
-        CONSOLE.print(format!("Use <magenta>{} help</magenta> for additional information", NAME.to_lowercase()));
+      match self.command {
+        Some(ref command) => {
+          match command {
+            Commands::Help(options) => execute_command(options),
+            Commands::Version(options) => execute_command(options),
+            Commands::Upgrade(options) => execute_command(options),
+            Commands::Run(options) => execute_command(options),
+            Commands::Info(options) => execute_command(options),
 
-        std::process::exit(0);
-      }
+            Commands::External(args) => {
+              let arg0_default = String::new();
+              let arg0 = args.first().unwrap_or(&arg0_default);
 
-      if let Some(ref command) = self.command {
-        match command {
-          Commands::Help(options) => execute_command(options),
-          Commands::Version(options) => execute_command(options),
-          Commands::Upgrade(options) => execute_command(options),
-          Commands::Run(options) => execute_command(options),
+              let commands = Commands::operations().iter()
+                .flat_map(|e| e.iter().map(|op| op.command_type().name().to_string()))
+                .collect::<Vec<String>>();
 
-          Commands::External(args) => {
-            let arg0_default = String::new();
-            let arg0 = args.first().unwrap_or(&arg0_default);
-
-            let commands = Commands::operations().iter()
-              .flat_map(|e| e.iter().map(|op| op.command_type().name().to_string()))
-              .collect::<Vec<String>>();
-
-            CONSOLE.exit(
-              if let Some(suggestion) = StringV2::from(arg0).nearest(commands) {
-                format!("Did you mean <magenta>{suggestion}</magenta>?")
-              } else {
-                format!("Unknown operation: {arg0}")
-              }
-            );
+              CONSOLE.exit(
+                if let Some(suggestion) = StringV2::from(arg0).nearest(commands) {
+                  format!("Did you mean <magenta>{suggestion}</magenta>?")
+                } else {
+                  format!("Unknown operation: {arg0}")
+                }
+              );
+            }
           }
+
+          Ok(())
+        }
+        _ => {
+          print_slogan();
+          CONSOLE.print(format!("Use <magenta>{} help</magenta> for additional information", NAME.to_lowercase()));
+
+          std::process::exit(0);
         }
       }
-
-      Ok(())
     }
   }
 }

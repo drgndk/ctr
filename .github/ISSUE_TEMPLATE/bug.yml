@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-issue-forms.json
 name: Bug Report
 description: I would like to report an issue I have encountered.
 labels: ["bug"]
@@ -9,6 +10,15 @@ body:
       options:
         - label: This issue has not been previously reported.
           required: true
+
+  - type: textarea
+    id: systeminfo
+    attributes:
+      label: System Information
+      description: execute `ctr info` and paste the output here.
+      render: sh
+    validations:
+      required: true
 
   - type: textarea
     id: description

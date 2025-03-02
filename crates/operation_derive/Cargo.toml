@@ -1,9 +1,9 @@
 [package]
 name = "operation_derive"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-syn = "1.0"
+syn = "~1.0"
 quote = "~1.0.38"
 proc-macro2 = "~1.0.93"
 

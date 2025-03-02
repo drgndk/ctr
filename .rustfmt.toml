@@ -1,0 +1,59 @@
+binop_separator = "Back"
+brace_style = "PreferSameLine"
+
+color = "Always"
+combine_control_expr = false
+comment_width = 80
+condense_wildcard_suffixes = true
+control_brace_style = "AlwaysSameLine"
+
+edition = "2024"
+empty_item_single_line = true
+error_on_unformatted = true
+
+fn_params_layout = "Compressed"
+fn_single_line = false
+force_explicit_abi = true
+force_multiline_blocks = true
+format_code_in_doc_comments = true
+format_macro_matchers = true
+format_macro_bodies = true
+
+group_imports = "StdExternalCrate"
+
+hard_tabs = false
+hex_literal_case = "Upper"
+
+imports_granularity = "Crate"
+imports_indent = "Block"
+imports_layout = "Mixed"
+indent_style = "Block"
+
+match_arm_blocks = true
+match_block_trailing_comma = true
+max_width = 256
+
+normalize_comments = true
+normalize_doc_attributes = true
+
+overflow_delimited_expr = true
+
+reorder_impl_items = true
+
+single_line_if_else_max_width = 0
+single_line_let_else_max_width = 0
+skip_children = true
+struct_lit_single_line = false
+struct_lit_width = 0
+style_edition = "2024"
+
+tab_spaces = 2
+trailing_comma = "Vertical"
+trailing_semicolon = false
+
+use_field_init_shorthand = true
+use_try_shorthand = true
+unstable_features = true
+
+where_single_line = true
+wrap_comments = true

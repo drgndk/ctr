@@ -1,9 +1,8 @@
-use crate::struct_gen;
-
+use crate::{console::CONSOLE, struct_gen};
 pub mod types;
 use types::CommandType;
 
-pub trait Operation<O = ()>  {
+pub trait Operation<O = ()> {
   const NAME: &'static str;
   const PARENT: Option<&'static str> = None;
 
@@ -28,7 +27,6 @@ struct_gen! {
   }
 
   mod preset_costructors {
-    #[doc = "generate a Command struct for the `-h/--help` flag"]
     pub fn help_flag() -> Self {
       Self::flag("help", "Prints this message.")
     }
@@ -38,16 +36,14 @@ struct_gen! {
     pub fn option(name: impl Into<String>, example: impl Into<String>, about: impl Into<String>) -> Self {
       let name = name.into().to_lowercase();
       if name.is_empty() {
-        panic!("`long` cannot be empty.");
+        CONSOLE.panic("`long` cannot be empty.");
       }
 
       Self {
         example: Some(example.into()),
         about: about.into(),
         command_type: CommandType::Flag {
-          short: name.chars().next().unwrap_or_else(|| {
-            panic!("`short` cannot be empty.");
-          }),
+          short: name.chars().next().unwrap_or_else(|| CONSOLE.panic("`short` cannot be empty.")),
           name,
         }
       }
@@ -56,7 +52,7 @@ struct_gen! {
     pub fn long_option(name: impl Into<String>, example: impl Into<String>, about: impl Into<String>) -> Self {
       let name = name.into().to_lowercase();
       if name.is_empty() {
-        panic!("`long` cannot be empty.");
+        CONSOLE.panic("`long` cannot be empty.");
       }
 
       Self {
@@ -71,16 +67,14 @@ struct_gen! {
     pub fn flag(name: impl Into<String>, about: impl Into<String>) -> Self {
       let name = name.into().to_lowercase();
       if name.is_empty() {
-        panic!("`long` cannot be empty.");
+        CONSOLE.panic("`long` cannot be empty.");
       }
 
       Self {
         example: None,
         about: about.into(),
         command_type: CommandType::Flag {
-          short: name.chars().next().unwrap_or_else(|| {
-            panic!("`short` cannot be empty.");
-          }).to_ascii_uppercase(),
+          short: name.chars().next().unwrap_or_else(|| CONSOLE.panic("`short` cannot be empty.")).to_ascii_uppercase(),
           name,
         }
       }
@@ -89,7 +83,7 @@ struct_gen! {
     pub fn long_flag(name: impl Into<String>, about: impl Into<String>) -> Self {
       let name = name.into().to_lowercase();
       if name.is_empty() {
-        panic!("`long` cannot be empty.");
+        CONSOLE.panic("`long` cannot be empty.");
       }
 
       Self {
@@ -106,7 +100,7 @@ struct_gen! {
     pub fn operation(name: impl Into<String>, example: impl Into<String>, about: impl Into<String>) -> Self {
       let name = name.into().to_lowercase();
       if name.is_empty() {
-        panic!("`name` cannot be empty.");
+        CONSOLE.panic("`name` cannot be empty.");
       }
 
       Self {
@@ -121,7 +115,7 @@ struct_gen! {
     pub fn command(name: impl Into<String>, about: impl Into<String>) -> Self {
       let name = name.into().to_lowercase();
       if name.is_empty() {
-        panic!("`name` cannot be empty.");
+        CONSOLE.panic("`name` cannot be empty.");
       }
 
       Self {

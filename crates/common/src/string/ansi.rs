@@ -1,9 +1,19 @@
-use crate::{struct_gen, enum_gen};
+use crate::{enum_gen, env::consts::NO_COLOR, struct_gen};
 
 struct_gen! {
   pub struct EffectSettings use PartialEq, PartialOrd, Eq, Ord, Clone {
     let bright: bool = false;
     let bg: bool = false;
+  }
+
+  mod presets {
+    pub fn with_bright() -> Self {
+      Self { bright: true, bg: false }
+    }
+
+    pub fn with_background(bright: bool) -> Self {
+      Self { bright, bg: true }
+    }
   }
 }
 
@@ -21,7 +31,7 @@ struct_gen! {
   mod vec_functions {
     pub fn push(self: &mut Self, effect: Effect) {
       // If the NO_COLOR environment variable is set, don't add any effects.
-      if std::env::var("NO_COLOR").is_ok() {
+      if *NO_COLOR {
         return;
       }
 
@@ -102,8 +112,8 @@ enum_gen! {
   mod utils {
     fn return_base(base: Effect, settings: &EffectSettings) -> u8 {
       base.get_ansi_value()
-        .saturating_add(settings.bg.then(|| 10).unwrap_or(0))
-        .saturating_add(settings.bright.then(|| 60).unwrap_or(0))
+        .saturating_add(if settings.bg { 10 } else { 0 })
+        .saturating_add(if settings.bright { 60 } else { 0 })
     }
 
     pub fn get_ansi_value(self: &Self) -> u8 {
@@ -126,32 +136,32 @@ enum_gen! {
         Self::Cyan => 36,
         Self::White => 37,
 
-        Self::BrightBlack => Self::return_base(Self::Black, &EffectSettings::generate(true, false)),
-        Self::BrightRed => Self::return_base(Self::Red, &EffectSettings::generate(true, false)),
-        Self::BrightGreen => Self::return_base(Self::Green, &EffectSettings::generate(true, false)),
-        Self::BrightYellow => Self::return_base(Self::Yellow, &EffectSettings::generate(true, false)),
-        Self::BrightBlue => Self::return_base(Self::Blue, &EffectSettings::generate(true, false)),
-        Self::BrightMagenta => Self::return_base(Self::Magenta, &EffectSettings::generate(true, false)),
-        Self::BrightCyan => Self::return_base(Self::Cyan, &EffectSettings::generate(true, false)),
-        Self::BrightWhite => Self::return_base(Self::White, &EffectSettings::generate(true, false)),
+        Self::BrightBlack => Self::return_base(Self::Black, &EffectSettings::with_bright()),
+        Self::BrightRed => Self::return_base(Self::Red, &EffectSettings::with_bright()),
+        Self::BrightGreen => Self::return_base(Self::Green, &EffectSettings::with_bright()),
+        Self::BrightYellow => Self::return_base(Self::Yellow, &EffectSettings::with_bright()),
+        Self::BrightBlue => Self::return_base(Self::Blue, &EffectSettings::with_bright()),
+        Self::BrightMagenta => Self::return_base(Self::Magenta, &EffectSettings::with_bright()),
+        Self::BrightCyan => Self::return_base(Self::Cyan, &EffectSettings::with_bright()),
+        Self::BrightWhite => Self::return_base(Self::White, &EffectSettings::with_bright()),
 
-        Self::BlackBackground => Self::return_base(Self::Black, &EffectSettings::generate(false, true)),
-        Self::RedBackground => Self::return_base(Self::Red, &EffectSettings::generate(false, true)),
-        Self::GreenBackground => Self::return_base(Self::Green, &EffectSettings::generate(false, true)),
-        Self::YellowBackground => Self::return_base(Self::Yellow, &EffectSettings::generate(false, true)),
-        Self::BlueBackground => Self::return_base(Self::Blue, &EffectSettings::generate(false, true)),
-        Self::MagentaBackground => Self::return_base(Self::Magenta, &EffectSettings::generate(false, true)),
-        Self::CyanBackground => Self::return_base(Self::Cyan, &EffectSettings::generate(false, true)),
-        Self::WhiteBackground => Self::return_base(Self::White, &EffectSettings::generate(false, true)),
+        Self::BlackBackground => Self::return_base(Self::Black, &EffectSettings::with_background(false)),
+        Self::RedBackground => Self::return_base(Self::Red, &EffectSettings::with_background(false)),
+        Self::GreenBackground => Self::return_base(Self::Green, &EffectSettings::with_background(false)),
+        Self::YellowBackground => Self::return_base(Self::Yellow, &EffectSettings::with_background(false)),
+        Self::BlueBackground => Self::return_base(Self::Blue, &EffectSettings::with_background(false)),
+        Self::MagentaBackground => Self::return_base(Self::Magenta, &EffectSettings::with_background(false)),
+        Self::CyanBackground => Self::return_base(Self::Cyan, &EffectSettings::with_background(false)),
+        Self::WhiteBackground => Self::return_base(Self::White, &EffectSettings::with_background(false)),
 
-        Self::BrightBlackBackground => Self::return_base(Self::Black, &EffectSettings::generate(true, true)),
-        Self::BrightRedBackground => Self::return_base(Self::Red, &EffectSettings::generate(true, true)),
-        Self::BrightGreenBackground => Self::return_base(Self::Green, &EffectSettings::generate(true, true)),
-        Self::BrightYellowBackground => Self::return_base(Self::Yellow, &EffectSettings::generate(true, true)),
-        Self::BrightBlueBackground => Self::return_base(Self::Blue, &EffectSettings::generate(true, true)),
-        Self::BrightMagentaBackground => Self::return_base(Self::Magenta, &EffectSettings::generate(true, true)),
-        Self::BrightCyanBackground => Self::return_base(Self::Cyan, &EffectSettings::generate(true, true)),
-        Self::BrightWhiteBackground => Self::return_base(Self::White, &EffectSettings::generate(true, true)),
+        Self::BrightBlackBackground => Self::return_base(Self::Black, &EffectSettings::with_background(true)),
+        Self::BrightRedBackground => Self::return_base(Self::Red, &EffectSettings::with_background(true)),
+        Self::BrightGreenBackground => Self::return_base(Self::Green, &EffectSettings::with_background(true)),
+        Self::BrightYellowBackground => Self::return_base(Self::Yellow, &EffectSettings::with_background(true)),
+        Self::BrightBlueBackground => Self::return_base(Self::Blue, &EffectSettings::with_background(true)),
+        Self::BrightMagentaBackground => Self::return_base(Self::Magenta, &EffectSettings::with_background(true)),
+        Self::BrightCyanBackground => Self::return_base(Self::Cyan, &EffectSettings::with_background(true)),
+        Self::BrightWhiteBackground => Self::return_base(Self::White, &EffectSettings::with_background(true)),
       }
     }
 

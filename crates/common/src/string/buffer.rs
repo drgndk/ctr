@@ -1,7 +1,6 @@
 use std::{slice::Iter, string::FromUtf8Error};
 
-use crate::console::CONSOLE;
-use crate::{string::StringV2, struct_gen};
+use crate::{console::CONSOLE, string::StringV2, struct_gen};
 
 struct_gen! {
   pub struct Buffer use Clone, Ord, Eq, PartialOrd, PartialEq {
@@ -121,7 +120,11 @@ struct_gen! {
         );
       }
 
-      while length < capacity {
+      loop {
+        if length >= capacity {
+          break;
+        }
+
         for ch in str_bytes.chars().take(capacity - length) {
           result.push(ch);
         }
@@ -160,7 +163,7 @@ struct_gen! {
         #[cfg(debug_assertions)]
         CONSOLE.suggest("Converting an empty buffer to a string", vec![stringify!(StringV2::new())]);
 
-        return Ok(StringV2::new());
+        return Ok(StringV2::default());
       }
 
       StringV2::from_utf8(self.bytes.clone())
@@ -325,7 +328,10 @@ struct_gen! {
     /// If the buffer cannot reserve additional space.
     pub fn push_safe(self: &mut Self, byte: impl Into<char>) -> Result<(), std::collections::TryReserveError> {
       match self.bytes.try_reserve(1) {
-        Ok(_) => Ok(self.push(byte)),
+        Ok(_) => {
+            self.push(byte);
+            Ok(())
+        },
         Err(err) => Err(err)
       }
     }

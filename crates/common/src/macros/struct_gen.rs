@@ -78,16 +78,17 @@ macro_rules! struct_gen {
       ),*
     }
 
-    impl$(<$($generic_param$(: $generic_constraint)?),*>)? $struct_name$(<$($generic_param),*>)? {
-      #[allow(dead_code)]
-      pub fn new() -> Self {
+    impl Default for $struct_name {
+      fn default() -> Self {
         Self {
           $($field_name: $field_default),*
         }
       }
+    }
 
+    impl$(<$($generic_param$(: $generic_constraint)?),*>)? $struct_name$(<$($generic_param),*>)? {
       #[allow(dead_code)]
-      pub fn generate($($field_name: $field_type),*) -> Self {
+      pub fn new($($field_name: $field_type),*) -> Self {
         Self {
           $( $field_name ),*
         }

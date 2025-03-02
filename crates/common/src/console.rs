@@ -1,13 +1,27 @@
 use std::{collections::HashMap, sync::LazyLock};
-use crate::{command::{types::{ArgumentType, CommandType}, Command, Operation}, string::StringV2, struct_gen, NAME};
+
+use crate::{
+  command::{
+    Command, Operation,
+    types::{ArgumentType, CommandType},
+  },
+  env::consts::BINARY_NAME,
+  string::StringV2,
+  struct_gen,
+};
 
 const SPACING: usize = 24;
-
 fn operation_name(operation: &Command) -> StringV2 {
   match operation.command_type() {
-    CommandType::Flag { short: ' ', name } => StringV2::from(format!("    --{name}")),
-    CommandType::Flag { short, name } => StringV2::from(format!("-{short}, --{name}")),
-    _ => StringV2::from(format!("{}", operation.command_type().name()))
+    CommandType::Flag {
+      short: ' ',
+      name,
+    } => StringV2::from(format!("    --{name}")),
+    CommandType::Flag {
+      short,
+      name,
+    } => StringV2::from(format!("-{short}, --{name}")),
+    _ => StringV2::from(operation.command_type().name().to_string()),
   }
 }
 
@@ -15,7 +29,6 @@ fn colorizer(content: &StringV2, code: &str) -> String {
   if content.is_whitespace() {
     return content.to_string();
   }
-
   format!("<{code}>{content}</{code}>")
 }
 
@@ -88,7 +101,7 @@ struct_gen! {
       let color_tag = color.into();
       StringV2::from(&format!("<{color_tag}>[</{color_tag}>{}<{color_tag}>]</{color_tag}>", tag.into()))
         .push_effect(font.into()).bold()
-        .push_effect(&format!("{color_tag}background"))
+        .push_effect(format!("{color_tag}background"))
     }
 
     pub fn log(self: &Self, message: impl Into<String>) {
@@ -122,7 +135,7 @@ struct_gen! {
     fn print_operation(self: &Self, operation: &Command, sizes: (&str, usize, usize)) {
       let (code, mut spacing, largest_operation_name) = sizes;
 
-      let name = operation_name(&operation);
+      let name = operation_name(operation);
       let mut formatted = StringV2::from(colorizer(&name, code)).bold();
       let unformatted_len = name.strip_ansi().len();
 
@@ -134,7 +147,7 @@ struct_gen! {
 
 
       spacing = operation.example().to_owned().map_or(spacing + additional_spacing, |example| {
-        formatted.push_str(&format!("{space}<black bright>{example}</black bright>", space = " ".repeat(additional_spacing)));
+        formatted.push_str(format!("{space}<brightblack>{example}</brightblack>", space = " ".repeat(additional_spacing)));
         spacing.saturating_sub(example.len())
       });
 
@@ -153,11 +166,11 @@ struct_gen! {
         if chunks.len() >= 1 {
           let spacing_length = formatted.strip_ansi().len();
 
-          while let Some(desc) = chunks.next() {
+          for desc in chunks {
             self.print(format!("{}{space_between}{desc}", " ".repeat(spacing_length)));
           }
 
-          println!("");
+          println!();
         }
       } else {
         self.print(formatted);
@@ -167,20 +180,20 @@ struct_gen! {
     pub fn print_operation_collection(self: &Self, operations_list: Vec<Vec<Command>>) {
       let mut collections: HashMap<String, Vec<Command>> = HashMap::new();
 
-      for operation in operations_list.into_iter().flat_map(|operations| operations) {
+      for operation in operations_list.into_iter().flatten() {
         let cmd_type = operation.command_type().clone();
         collections
           .entry(cmd_type.to_string())
-          .or_insert_with(Vec::new)
+          .or_default()
           .push(operation);
       }
 
       let mut collections = collections.into_iter().collect::<Vec<(String, Vec<Command>)>>();
-      if collections.len() > 0 {
+      if !collections.is_empty() {
         let mut spacing = SPACING;
         let mut largest_operation = 0;
 
-        collections.sort_by(|(a, _), (b, _)| a.cmp(&b));
+        collections.sort_by(|(a, _), (b, _)| a.cmp(b));
 
         for (header, operations) in collections.iter_mut() {
           if operations.is_empty() {
@@ -191,16 +204,16 @@ struct_gen! {
             CommandType::Other { .. } => {},
             _ => {
               if operations.len() > 1 {
-                header.push_str("S");
+                header.push('S');
               }
             },
           };
 
           *header = header.to_uppercase();
 
-          operations.sort_by(|a, b| a.command_type().name().cmp(&b.command_type().name()));
+          operations.sort_by_key(|a| a.command_type().name());
           for operation in operations.iter() {
-            let op_name = operation_name(&operation).strip_ansi();
+            let op_name = operation_name(operation).strip_ansi();
             let op_len = op_name.len();
             let mut example_len = SPACING.saturating_sub(op_len);
 
@@ -216,7 +229,7 @@ struct_gen! {
 
         for (header, operations) in collections {
           if !operations.is_empty() {
-            println!("");
+            println!();
             self.print(format!("<bold>{header}</bold>"));
             for operation in operations {
               self.print_operation(&operation, (operation.command_type().to_color(), spacing, largest_operation));
@@ -229,7 +242,7 @@ struct_gen! {
     pub fn print_usage<Command: Operation>(self: &Self, argument_types: Vec<ArgumentType>) {
       let command_name = Command::NAME.to_lowercase();
       let usage_command = {
-        let mut name = NAME.to_lowercase();
+        let mut name = BINARY_NAME.to_lowercase();
 
         if command_name == name {
           None
@@ -243,7 +256,7 @@ struct_gen! {
       };
 
       let command = {
-        let mut args_v2 = StringV2::new();
+        let mut args_v2 = StringV2::default();
         argument_types.iter().for_each(|argument_type| {
           args_v2.push_str(format!("{} ", argument_type.to_str_v2()));
         });
@@ -261,4 +274,4 @@ struct_gen! {
   }
 }
 
-pub static CONSOLE: LazyLock<Console> = LazyLock::new(|| Console::new());
+pub static CONSOLE: LazyLock<Console> = LazyLock::new(Console::default);

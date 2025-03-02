@@ -1,5 +1,4 @@
 use crate::{enum_gen, string::StringV2};
-
 enum_gen! {
   pub enum CommandType use Clone {
     Flag {
@@ -45,13 +44,13 @@ enum_gen! {
 
 enum_gen! {
   pub enum ArgumentType {
+    Flags,
     Operand {
       let name: String = String::new();
     },
     Variadic {
       let name: String = String::new();
     },
-    Flags,
   }
 
   mod implementation {
@@ -59,7 +58,7 @@ enum_gen! {
       match self {
         Self::Operand { name } => StringV2::from(name).push_effect("brightblue"),
         Self::Variadic { name } => StringV2::from(format!("...{}", name)).push_effect("brightgreen"),
-        Self::Flags => StringV2::from("...flags").push_effect("brightmagenta")
+        Self::Flags => StringV2::from("[...flags]").push_effect("brightmagenta")
       }
     }
   }

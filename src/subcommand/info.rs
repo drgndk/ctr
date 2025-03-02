@@ -1,9 +1,15 @@
+use std::env::consts::*;
+
 use clap::Args;
-use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen};
+use std_v2::{
+  command::{Operation, types::ArgumentType},
+  console::CONSOLE,
+  env::consts::BINARY_NAME,
+  struct_gen,
+};
 use sysinfo::System;
 
-use crate::{get_version, NAME};
-use std::env::consts::*;
+use crate::get_version;
 
 struct_gen! {
   pub struct Options use Args, std_v2::derive::Command {
@@ -25,9 +31,7 @@ struct_gen! {
 
       let mut data = vec![];
 
-
-      CONSOLE.print(format!("<brightmagenta>{NAME} v{}</brightmagenta>", get_version()));
-      println!();
+      CONSOLE.print(format!("<brightmagenta>{BINARY_NAME} v{}</brightmagenta>\n", get_version()));
 
       data.push(
         ("os", match System::name() {
@@ -49,15 +53,15 @@ struct_gen! {
         }
       }
 
-      if let Some(desktop_env) = std::env::var("DESKTOP_SESSION").ok() {
+      if let Ok(desktop_env) = std::env::var("DESKTOP_SESSION") {
         data.push(("desktop", desktop_env));
       }
 
-      if let Some(window_man) = std::env::var("XDG_CURRENT_DESKTOP").ok() {
+      if let Ok(window_man) = std::env::var("XDG_CURRENT_DESKTOP") {
         data.push(("wm", window_man));
       }
 
-      if let Some(language) = std::env::var("LANG").ok() {
+      if let Ok(language) = std::env::var("LANG") {
         data.push(("lang", language));
       }
 
@@ -65,7 +69,7 @@ struct_gen! {
         let uptime_seconds = System::uptime();
         let minutes = (uptime_seconds / 60) % 60;
 
-        let mut uptime_parts = vec![
+        let mut uptime_parts = [
           (uptime_seconds / 31536000000, 'k'),        // Seriously?! What is wrong with you?
           ((uptime_seconds / 3153600000) % 10, 'c'),  // A whole century? Are you even human?
           ((uptime_seconds / 315360000) % 10, 'd'),   // You are dedicated to your pc, aren't you?
@@ -114,9 +118,16 @@ struct_gen! {
         data.push(("shell", shell));
       }
 
-      match std::process::Command::new("rustc").arg("--version").output() {
-        Ok(rust_version) => data.push(("rustc", String::from_utf8_lossy(&rust_version.stdout).replace('\n', ""))),
-        _ => CONSOLE.error("Could not determine rustc version")
+      if let Ok(rust_version) = std::process::Command::new("rustc").arg("--version").output() {
+        data.push(("rustc", String::from_utf8_lossy(&rust_version.stdout).replace('\n', "")));
+      } else {
+        CONSOLE.error("Could not determine rustc version");
+      }
+
+      if let Ok(rust_version) = std::process::Command::new("cargo").arg("--version").output() {
+        data.push(("cargo", String::from_utf8_lossy(&rust_version.stdout).replace('\n', "")));
+      } else {
+        CONSOLE.error("Could not determine cargo version");
       }
 
       self.format_data(data);
@@ -151,7 +162,7 @@ struct_gen! {
       let mut max_key_len = 0;
       data.sort_by(|a, b| {
         max_key_len = max_key_len.max(a.0.len()).max(b.0.len());
-        return a.0.cmp(b.0);
+        a.0.cmp(b.0)
       });
 
       for (key, value) in data {

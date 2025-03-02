@@ -1,23 +1,30 @@
-use std::{path::Path, process::{Command, ExitStatus}};
+use std::{
+  path::Path,
+  process::{Command, ExitStatus},
+};
 
 use clap::Args;
-use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen};
+use common::{
+  command::{Operation, types::ArgumentType},
+  console::CONSOLE,
+  env::consts::{BINARY_NAME, INSTALL_DIR, REPO_DIR},
+  struct_gen,
+};
 use reqwest::blocking::Client;
 use semver::Version;
-use std_v2::{INSTALL_DIR, REPO_DIR};
-
-use crate::{NAME, VERSION};
+use serde::Deserialize;
 
 use super::check_conflicts;
+use crate::VERSION;
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 struct CargoPackage {
-  version: String
+  version: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 struct CargoToml {
-  package: CargoPackage
+  package: CargoPackage,
 }
 
 struct_gen! {
@@ -50,7 +57,7 @@ struct_gen! {
             if self.force {
               self.download_update();
             } else {
-              CONSOLE.print(format!("<brightmagenta>A new version of <italic>{NAME}</italic> is available: <bold><white>{latest}</white></bold></brightmagenta>"));
+              CONSOLE.print(format!("<brightmagenta>A new version of <italic>{BINARY_NAME}</italic> is available: <bold><white>{latest}</white></bold></brightmagenta>"));
               if !self.check {
                 println!();
                 self.download_update();
@@ -84,20 +91,14 @@ struct_gen! {
   mod implementation {
     fn fetch_versions(self: &Self) -> Result<(semver::Version, semver::Version), Box<dyn std::error::Error>> {
       let url = "https://raw.githubusercontent.com/drgndk/ctr/main/Cargo.toml";
-      let response = match Client::new().get(url).send() {
-        Ok(response) => response,
-        Err(err) => CONSOLE.exit(format!("Failed to fetch the remote Cargo.toml: {err}"))
-      };
+      let response = Client::new().get(url).send()
+        .unwrap_or_else(|err| CONSOLE.exit(format!("Failed to fetch the remote Cargo.toml: {err}")));
 
-      let cargo_toml_content = match response.text() {
-        Ok(content) => content,
-        Err(err) => CONSOLE.exit(format!("Failed to read the remote Cargo.toml: {err}"))
-      };
+      let cargo_toml_content = response.text()
+        .unwrap_or_else(|err| CONSOLE.exit(format!("Failed to read the remote Cargo.toml: {err}")));
 
-      let cargo_toml: CargoToml = match std_v2::toml::parse::<CargoToml>(&cargo_toml_content) {
-        Ok(toml) => toml,
-        Err(err) => CONSOLE.exit(format!("Failed to parse the remote Cargo.toml: {err}"))
-      };
+      let cargo_toml: CargoToml = std_v2::toml::parse::<CargoToml>(&cargo_toml_content)
+        .unwrap_or_else(|err| CONSOLE.exit(format!("Failed to parse the remote Cargo.toml: {err}")));
 
       if let Ok(latest_version) = Version::parse(&cargo_toml.package.version) {
         let current_version = Version::parse(VERSION).unwrap_or_else(|_| CONSOLE.exit("Failed to parse the current version"));
@@ -144,8 +145,7 @@ struct_gen! {
         // if there is another error, cargo will print it
         std::process::exit(1);
       } else {
-        let old_binary_path = INSTALL_DIR.join("bin/ctr");
-        let new_binary_path = repo_path.join("target/release/ctr");
+        let old_binary_path = INSTALL_DIR.join(format!("bin/{BINARY_NAME}"));
 
         if old_binary_path.exists() {
           if let Err(err) = std::fs::remove_file(&old_binary_path) {
@@ -153,23 +153,24 @@ struct_gen! {
           }
         }
 
+        let new_binary_path = repo_path.join(format!("target/release/{BINARY_NAME}"));
         if let Err(err) = std::fs::copy(&new_binary_path, old_binary_path) {
           CONSOLE.exit(format!("Failed to copy the new binary: {err}"));
         }
       }
 
-      let bin_path = &*INSTALL_DIR.join("bin/ctr");
+      let bin_path = &*INSTALL_DIR.join(format!("bin/{BINARY_NAME}"));
       if !Path::new(&bin_path).exists() {
-        let new_binary_path = repo_path.join(format!("target/release/{NAME}"));
+        let new_binary_path = repo_path.join(format!("target/release/{BINARY_NAME}"));
         if std::fs::rename(&new_binary_path, bin_path).is_err() {
           println!();
-          CONSOLE.warn(format!("<brightyellow><white><bold>{NAME}</bold></white> was successfully built using cargo, but no symlink was created inside <white>{}</white></brightyellow>", bin_path.display()));
+          CONSOLE.warn(format!("<brightyellow><white><bold>{BINARY_NAME}</bold></white> was successfully built using cargo, but no symlink was created inside <white>{}</white></brightyellow>", bin_path.display()));
           CONSOLE.warn("<brightyellow>to do that, you can run the following command: </brightyellow>");
-          CONSOLE.print(format!("<bold>sudo</bold> ln -s {target:?} {bin_path:?}", target = repo_path.join(format!("target/release/{NAME}")).display()));
+          CONSOLE.print(format!("<bold>sudo</bold> ln -s {new_binary_path:?} {bin_path:?}"));
         }
       }
 
-      CONSOLE.print(format!("\n<brightmagenta><bold>Successfully</bold> updated <white>{NAME}</white> to the latest version</brightmagenta>"));
+      CONSOLE.print(format!("\n<brightmagenta><bold>Successfully</bold> updated <white>{BINARY_NAME}</white> to the latest version</brightmagenta>"));
     }
   }
 }

@@ -1,14 +1,9 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use common::struct_gen;
 use serde::Deserialize;
-use std_v2::{toml::Value, HOME};
-
+use std_v2::{env::consts::HOME, struct_gen, toml::Value};
 type EnvironmentMap = HashMap<String, Value>;
-
 static USER_STR: LazyLock<String> = LazyLock::new(|| HOME.to_string_lossy().to_string());
-static SHELL: LazyLock<String> = LazyLock::new(|| std::env::var("SHELL").unwrap_or("bash".to_owned()));
-
 struct_gen! {
   pub struct LaunchConfigRunAs use Deserialize, Clone {
     pub let sudo: Option<bool> = Some(false);
@@ -29,7 +24,7 @@ struct_gen! {
 
 struct_gen! {
   pub struct LaunchConfig use Deserialize {
-    pub let general: LaunchConfigGeneral = LaunchConfigGeneral::new();
+    pub let general: LaunchConfigGeneral = LaunchConfigGeneral::default();
     pub let run_as: Option<LaunchConfigRunAs> = None;
     pub let environment: Option<EnvironmentMap> = Some(EnvironmentMap::new());
   }
@@ -67,6 +62,7 @@ struct_gen! {
   }
 }
 
+static SHELL: LazyLock<String> = LazyLock::new(|| std::env::var("SHELL").unwrap_or("bash".to_owned()));
 struct_gen! {
   pub struct LaunchOptions {
     pub let preserve_env: bool = true;

@@ -1,12 +1,15 @@
 use std::{os::unix::process::CommandExt, path::Path, process::Command};
 
 use clap::Args;
-use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen, NAME};
-
+use std_v2::{
+  command::{Operation, types::ArgumentType},
+  console::CONSOLE,
+  env::consts::{BINARY_NAME, CONFIG_DIR},
+  struct_gen,
+};
 mod ser;
 use ser::*;
-use std_v2::CONFIG_DIR;
-use users::get_group_by_name;
+use uzers::{get_group_by_name, get_user_by_name};
 
 struct_gen! {
   pub struct Options use Args, std_v2::derive::Command {
@@ -40,7 +43,7 @@ struct_gen! {
       (self.help).then(|| Self::usage(0));
 
       if self.args.is_empty() {
-        CONSOLE.exit(format!("No binary specified. Use <magenta>{NAME} run --help</magenta> for additional information"));
+        CONSOLE.exit(format!("No binary specified. Use <magenta>{BINARY_NAME} run --help</magenta> for additional information"));
       }
 
 
@@ -70,7 +73,7 @@ struct_gen! {
           return Some(uid);
         }
 
-        if let Some(user) = users::get_user_by_name(user.as_str()) {
+        if let Some(user) = get_user_by_name(user.as_str()) {
           return Some(user.uid());
         }
       }
@@ -82,7 +85,7 @@ struct_gen! {
   mod implementation {
     pub fn get_configs(self: &Self) -> LaunchConfig {
       let config_path = &*CONFIG_DIR.join(format!("binaries/{}.toml", self.args()[0]));
-      let mut default_config = LaunchConfig::new();
+      let mut default_config = LaunchConfig::default();
 
       if self.ignore_config || !config_path.exists() {
         if !self.args.is_empty() && default_config.general.command.is_none() {
@@ -153,7 +156,7 @@ struct_gen! {
             }
 
             if let Some(uid) = self.get_user_id(&run_as.user) {
-              command.gid(uid);
+              command.uid(uid);
             }
           }
         }

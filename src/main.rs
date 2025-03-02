@@ -1,21 +1,24 @@
 use std::process::Command;
 
-use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, string::StringV2, NAME};
-use std_v2::{derive::Command, struct_gen, REPO_DIR, CONFIG_DIR, IS_DEBUG};
-use clap::{error::{ContextKind, ErrorKind}, Parser, Subcommand};
-
+use clap::{
+  Parser, Subcommand,
+  error::{ContextKind, ErrorKind},
+};
+use common::{
+  command::{Operation, types::ArgumentType},
+  console::CONSOLE,
+  env::consts::{BINARY_NAME, CONFIG_DIR, IS_DEBUG, REPO_DIR},
+  string::StringV2,
+};
+use std_v2::{derive::Command, struct_gen};
 mod subcommand;
-
-use subcommand::help::Options as HelpCommand;
-use subcommand::version::Options as VersionCommand;
-use subcommand::upgrade::Options as UpgradeCommand;
-use subcommand::run::Options as RunCommand;
-use subcommand::info::Options as InfoCommand;
+use subcommand::{
+  completions::Options as CompletionsCommand, help::Options as HelpCommand, info::Options as InfoCommand, notify::Options as NotifyCommand, run::Options as RunCommand, upgrade::Options as UpgradeCommand, version::Options as VersionCommand,
+};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn get_version() -> String {
-  #[allow(unused_mut)]
   let mut ver = VERSION.to_string();
 
   // Debug builds should have a "-dev", and release builds should have a "+<commit hash>" suffix
@@ -25,10 +28,12 @@ pub fn get_version() -> String {
     if output.status.success() {
       if let Ok(commit_hash) = String::from_utf8(output.stdout) {
         ver.push_str(&format!("+{}", commit_hash.trim()));
+      } else {
+        // if for some reason the commit hash cannot be retrieved, use "release" as a fallback
+        ver.push_str("+release");
       }
     }
   }
-
   ver
 }
 
@@ -45,8 +50,21 @@ pub enum Commands {
   Run(RunCommand),
   #[subcommand("Show information about the system")]
   Info(InfoCommand),
+  #[subcommand("Generate shell completions")]
+  Completions(CompletionsCommand),
+  #[subcommand("Send a desktop notification")]
+  Notify(NotifyCommand),
+
   #[command(external_subcommand)]
   External(Vec<String>),
+}
+
+impl Operation for Commands {
+  const NAME: &'static str = BINARY_NAME;
+
+  fn main(&self) -> std::io::Result<()> {
+    Ok(())
+  }
 }
 
 pub fn execute_command<Command: Operation>(command: &Command) {
@@ -55,10 +73,9 @@ pub fn execute_command<Command: Operation>(command: &Command) {
       if let Err(e) = command.main() {
         CONSOLE.panic(format!("{e}"));
       }
-
       std::process::exit(0);
     },
-    Err(e) => CONSOLE.panic(format!("{e}"))
+    Err(e) => CONSOLE.panic(format!("{e}")),
   }
 }
 
@@ -66,12 +83,12 @@ pub fn print_slogan() {
   CONSOLE.print(format!(
     "{desc} <brightblack>(v{version})</brightblack>\n",
     version = get_version(),
-    desc = env!("CARGO_PKG_DESCRIPTION").replace(NAME, &format!("<magenta>{NAME}</magenta>"))
+    desc = env!("CARGO_PKG_DESCRIPTION").replace(BINARY_NAME, &format!("<magenta>{BINARY_NAME}</magenta>"))
   ));
 }
 
 struct_gen! {
-  #[command(name = NAME, disable_help_flag = true, disable_help_subcommand = true, subcommand_required = false)]
+  #[command(name = BINARY_NAME, disable_help_flag = true, disable_help_subcommand = true, subcommand_required = false)]
   pub struct Options use Parser, Command {
     #[command(subcommand)]
     let command: Option<Commands> = None;
@@ -84,31 +101,20 @@ struct_gen! {
   }
 
   impl Operation {
-    const NAME: &'static str = NAME;
+    const NAME: &'static str = BINARY_NAME;
 
     fn usage(status: i32) {
       print_slogan();
 
-      CONSOLE.print_usage::<Options>(vec![
-        ArgumentType::Flags,
-        ArgumentType::Operand {
-          name: "operation".to_owned()
-        }
-      ]);
-
-      CONSOLE.print_operation_collection({
-        let mut operations = Options::operations();
-        operations.extend(Commands::operations());
-
-        operations
-      });
+      CONSOLE.print_usage::<Self>(vec![ArgumentType::Operand { name: "operation".to_owned()}, ArgumentType::Flags]);
+      CONSOLE.print_operation_collection(Self::operations());
 
       std::process::exit(status);
     }
 
     fn main(self: &Self) -> std::io::Result<()> {
       self.help.then(|| Self::usage(0));
-      self.version.then(|| execute_command(&VersionCommand::new()));
+      self.version.then(|| execute_command(&VersionCommand::default()));
 
       match self.command {
         Some(ref command) => {
@@ -118,6 +124,8 @@ struct_gen! {
             Commands::Upgrade(options) => execute_command(options),
             Commands::Run(options) => execute_command(options),
             Commands::Info(options) => execute_command(options),
+            Commands::Completions(options) => execute_command(options),
+            Commands::Notify(options) => execute_command(options),
 
             Commands::External(args) => {
               let arg0_default = String::new();
@@ -141,7 +149,7 @@ struct_gen! {
         }
         _ => {
           print_slogan();
-          CONSOLE.print(format!("Use <magenta>{} help</magenta> for additional information", NAME.to_lowercase()));
+          CONSOLE.print(format!("Use <magenta>{} help</magenta> for additional information", BINARY_NAME.to_lowercase()));
 
           std::process::exit(0);
         }
@@ -156,14 +164,17 @@ pub fn handle_error(e: ClapError) -> ! {
     ErrorKind::UnknownArgument => {
       if let Some(argument) = e.get(ContextKind::InvalidArg) {
         let arg = argument.to_string();
-
-        CONSOLE.exit(format!("The {} '{}' is not recognized.", {
-          if arg.starts_with("-") {
-            "argument"
-          } else {
-            "operation"
-          }
-        }, arg));
+        CONSOLE.exit(format!(
+          "The {} {:?} is not recognized.",
+          {
+            if arg.starts_with("-") {
+              "argument"
+            } else {
+              "operation"
+            }
+          },
+          arg
+        ));
       }
     },
     ErrorKind::ArgumentConflict => {
@@ -177,11 +188,9 @@ pub fn handle_error(e: ClapError) -> ! {
     ErrorKind::InvalidValue => {
       if let Some(argument) = e.get(ContextKind::InvalidArg) {
         let arg = argument.to_string();
-
         if arg.starts_with("-") {
           if let Some(invalid_value) = e.get(ContextKind::InvalidValue) {
             let value = invalid_value.to_string();
-
             if value.is_empty() {
               if let Some(argument_name) = arg.split_whitespace().next() {
                 CONSOLE.exit(format!("The argument '{argument_name}' requires a value."));
@@ -189,32 +198,24 @@ pub fn handle_error(e: ClapError) -> ! {
                 std::process::exit(1);
               }
             }
-
             CONSOLE.exit(format!("The value '{value}' is not valid for the argument '{arg}'."));
           }
         }
       }
     },
-    _ => CONSOLE.exit(format!("{e}"))
+    _ => CONSOLE.exit(format!("{e}")),
   }
-
   CONSOLE.exit("Unkown operation behavior");
 }
 
 fn run(argv: Vec<String>) {
   match Options::try_parse_from(argv.iter()) {
     Ok(cli) => execute_command::<Options>(&cli),
-    Err(e) => {
-      handle_error(e);
-    }
+    Err(e) => handle_error(e),
   }
 }
 
 fn main() {
-  if !CONFIG_DIR.exists() {
-    std::fs::create_dir_all(&*CONFIG_DIR).unwrap();
-  }
-
-
+  (!CONFIG_DIR.exists()).then(|| std::fs::create_dir_all(&*CONFIG_DIR).unwrap());
   run(std::env::args().collect::<Vec<String>>());
 }

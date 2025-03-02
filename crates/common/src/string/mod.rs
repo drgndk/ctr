@@ -1,15 +1,18 @@
 pub mod ansi;
 pub mod buffer;
-
-use std::{fmt::{Display, Formatter}, slice::{Iter, IterMut}, string::FromUtf8Error, vec::IntoIter};
+use std::{
+  fmt::{Display, Formatter},
+  slice::{Iter, IterMut},
+  string::FromUtf8Error,
+  vec::IntoIter,
+};
 
 use ansi::{Effect, EffectArray};
-use crate::{console::CONSOLE, enum_gen, struct_gen};
 use buffer::Buffer;
 
+use crate::{console::CONSOLE, enum_gen, env::consts::NO_COLOR, struct_gen};
 #[allow(dead_code)]
 const UTF_QUESTIONMARK: &str = "\u{FFFD}";
-
 enum_gen! {
   enum Tags {
     PreventsPanic
@@ -21,17 +24,17 @@ enum_gen! {
       match self {
         #[cfg(debug_assertions)]
         Self::PreventsPanic => Some(StringV2::from("<redbackground><red>[</red><bold>THIS MESSAGE PREVENTS A PANIC!</bold><red>]</red></redbackground>").render_ansi()),
+
         #[allow(unreachable_patterns)]
         _ => None
       }
     }
   }
 }
-
 struct_gen! {
   pub struct StringV2 use PartialEq, PartialOrd, Eq, Ord {
-    pub(super) let &mut buffer: Buffer = Buffer::new();
-    let global_effects: EffectArray = EffectArray::new();
+    pub(super) let &mut buffer: Buffer = Buffer::default();
+    let global_effects: EffectArray = EffectArray::default();
   }
 
   impl PartialEq<String> {
@@ -50,7 +53,7 @@ struct_gen! {
     fn from(ch: char) -> Self {
       Self {
         buffer: Buffer::from(ch),
-        global_effects: EffectArray::new(),
+        global_effects: EffectArray::default(),
       }
     }
   }
@@ -71,7 +74,7 @@ struct_gen! {
     fn from(buffer: Buffer) -> Self {
       Self {
         buffer,
-        global_effects: EffectArray::new(),
+        global_effects: EffectArray::default(),
       }
     }
   }
@@ -85,7 +88,7 @@ struct_gen! {
   impl From<&str> {
     fn from(s: &str) -> Self {
       if s.is_empty() {
-        return Self::new();
+        return Self::default();
       }
 
       Self::from(s.as_bytes().to_vec())
@@ -95,7 +98,7 @@ struct_gen! {
   impl From<String> {
     fn from(s: String) -> Self {
       if s.is_empty() {
-        return Self::new();
+        return Self::default();
       }
 
       Self::from(s.as_bytes().to_vec())
@@ -105,7 +108,7 @@ struct_gen! {
   impl From<&String> {
     fn from(s: &String) -> Self {
       if s.is_empty() {
-        return Self::new();
+        return Self::default();
       }
 
       Self::from(s.as_bytes().to_vec())
@@ -119,7 +122,6 @@ struct_gen! {
   }
 
   impl Display {
-    #[inline]
     fn fmt(self: &Self, f: &mut Formatter) -> std::fmt::Result {
       write!(f, "{}", self.render_ansi().to_string())
     }
@@ -142,7 +144,7 @@ struct_gen! {
     pub fn with_capacity(capacity: usize) -> Self {
       Self {
         buffer: Buffer::with_capacity(capacity),
-        global_effects: EffectArray::new(),
+        global_effects: EffectArray::default(),
       }
     }
 
@@ -150,9 +152,9 @@ struct_gen! {
       match String::from_utf8(vec.clone()) {
         Ok(..) => Ok(Self {
           buffer: Buffer::from(vec),
-          global_effects: EffectArray::new(),
+          global_effects: EffectArray::default(),
         }),
-        Err(error) => Err(FromUtf8Error::from(error)),
+        Err(error) => Err(error),
       }
     }
 
@@ -222,7 +224,7 @@ struct_gen! {
     pub fn reset(self: &Self) -> Self {
       Self {
         buffer: self.buffer.clone(),
-        global_effects: EffectArray::new(),
+        global_effects: EffectArray::default(),
       }
     }
 
@@ -276,11 +278,11 @@ struct_gen! {
 
   mod ansi_implementations {
     pub fn render_ansi(self: &Self) -> Self {
-      if std::env::var("NO_COLOR").is_ok() {
+      if *NO_COLOR {
         return self.strip_ansi();
       }
 
-      let mut result = Self::new();
+      let mut result = Self::default();
 
       if self.bytes().is_empty() {
         return result;
@@ -319,7 +321,7 @@ struct_gen! {
               iter.next();
               if next_ch == ' ' {
                 ended = true;
-                result.push_str(&format!(":{code} "));
+                result.push_str(format!(":{code} "));
                 code.clear();
                 break;
               }
@@ -332,7 +334,7 @@ struct_gen! {
                 continue;
               }
 
-              result.push_str(&format!(":{code}"));
+              result.push_str(format!(":{code}"));
               continue;
             }
 
@@ -344,10 +346,10 @@ struct_gen! {
               Some(code_enum) => {
                 match code_enum.to_ansi() {
                   Some(ansi) => result.push_str(ansi.to_string()),
-                  None => result.push_str(&format!(":{code}:"))
+                  None => result.push_str(format!(":{code}:"))
                 }
               },
-              None => result.push_str(&format!(":{code}:"))
+              None => result.push_str(format!(":{code}:"))
             }
           },
           '<' => {
@@ -413,7 +415,7 @@ struct_gen! {
                   result.push_str(style.to_ansi());
                 }
               } else {
-                result.push_str(&format!("</{tag}>"));
+                result.push_str(format!("</{tag}>"));
               }
             } else {
               match Effect::try_from(&tag) {
@@ -423,7 +425,7 @@ struct_gen! {
                   result.push_str(effect.to_ansi());
                 }
                 None => {
-                  result.push_str(&format!("<{tag}>"));
+                  result.push_str(format!("<{tag}>"));
                 }
               }
             }
@@ -449,8 +451,8 @@ struct_gen! {
       }
 
       if !active_styles.is_empty() {
-        while let Some(_) = tag_stack.pop() {
-          if let Some(_) = active_styles.pop() {
+        while tag_stack.pop().is_some() {
+          if active_styles.pop().is_some() {
             result.push_str(Effect::Reset);
             for style in &active_styles {
               result.push_str(style.to_ansi());
@@ -464,7 +466,7 @@ struct_gen! {
     }
 
     pub fn strip_ansi(self: &Self) -> Self {
-      let mut result = Self::new();
+      let mut result = Self::default();
       if self.bytes().is_empty() {
         return result;
       }
@@ -487,10 +489,10 @@ struct_gen! {
               Some(code_enum) => {
                 match code_enum.to_ansi() {
                   Some(ansi) => result.push_str(ansi.strip_ansi().to_string()),
-                  None => result.push_str(&format!(":{code}:"))
+                  None => result.push_str(format!(":{code}:"))
                 }
               },
-              None => result.push_str(&format!(":{code}:"))
+              None => result.push_str(format!(":{code}:"))
             }
           },
           '<' => {
@@ -514,8 +516,8 @@ struct_gen! {
               }
             }
 
-            if let None = Effect::try_from(&tag) {
-              result.push_str(&format!("<{tag}>"));
+            if Effect::try_from(&tag).is_none() {
+              result.push_str(format!("<{tag}>"));
             }
           },
           _ => {
@@ -590,7 +592,7 @@ struct_gen! {
         return needle.eq(&self.to_string());
       }
 
-      self.bytes().windows(needle.bytes().len()).any(|window| window == needle.as_bytes())
+      self.bytes().windows(needle.len()).any(|window| window == needle.as_bytes())
     }
 
     pub fn index_of(self: &Self, c: char) -> Option<usize> {
@@ -705,7 +707,7 @@ struct_gen! {
       let start = start.min(self.len());
       let end = end.min(self.len());
       if start >= end {
-        return Self::new();
+        return Self::default();
       }
 
       Self::from(self.bytes()[start..end].to_vec())

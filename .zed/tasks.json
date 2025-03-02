@@ -1,0 +1,21 @@
+[
+  {
+    "label": "fmt: codebase",
+    "show_summary": false,
+    "show_command": false,
+    "use_new_terminal": false,
+    // overengineered `fmt: file` for the entire codebase..
+    "command": "./scripts/format.fish -v",
+    "reveal_target": "center",
+    "hide": "on_success"
+  },
+  {
+    "label": "fmt: file",
+    "show_summary": false,
+    "show_command": false,
+    "use_new_terminal": false,
+    "command": "cargo +nightly fmt --",
+    "args": ["--unstable-features", "$ZED_FILE"],
+    "hide": "always"
+  }
+]

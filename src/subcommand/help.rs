@@ -1,5 +1,9 @@
 use clap::Args;
-use common::{command::{types::ArgumentType, Operation}, console::CONSOLE, struct_gen};
+use common::{
+  command::{Operation, types::ArgumentType},
+  console::CONSOLE,
+  struct_gen,
+};
 
 struct_gen! {
   pub struct Options use Args, std_v2::derive::Command {

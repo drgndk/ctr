@@ -1,0 +1,15 @@
+[package]
+name = "std_v2"
+edition = "2021"
+
+[dependencies]
+# emoji-printer = "~0.4.3"
+toml = "~0.8.20"
+serde = { version = "~1.0.217", features = ["derive"] }
+
+common = { path = "../common" }
+operation_derive = { path = "../operation_derive" }
+paste = "~1.0.15"
+
+[lib]
+path = "src/lib.rs"

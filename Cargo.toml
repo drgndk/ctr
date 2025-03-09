@@ -1,24 +1,101 @@
 [package]
-name = "ctr"
-description = "ctr is a cute companion for your system."
-version = "0.1.41"
-readme = "README.md"
-repository = "https://github.com/drgndk/ctr"
-edition = "2024"
+  name = "ctr"
+  description = "ctr is a cute companion for your system."
+  version = "0.1.5"
+  readme = "README.md"
+  repository = "https://github.com/drgndk/ctr"
+  edition = "2021"
+
+[[bin]]
+  name = "ctr-dbg"
+  path = "src/main.rs"
+  required-features = ["unstable"]
+
+[[bin]]
+  name = "ctr"
+  path = "src/main.rs"
+  required-features = ["stable"]
 
 [dependencies]
-std_v2 = { path = "./crates/std_v2" }
-common = { path = "./crates/common" }
-paste = "~1.0.15"
+  std_v2 = { path = "libs/std_v2" }
+  paste = "~1.0.15"
 
-clap = { version = "~4.5.28", features = ["derive"] }
-reqwest = { version = "~0.12.12", features = ["blocking"] }
-serde = { version = "~1.0.217", features = ["derive"] }
-semver = "~1.0.25"
+  clap = { version = "~4.5.28", features = ["derive"] }
+  reqwest = { version = "~0.12.12", features = ["blocking"] }
+  serde = { version = "~1.0.217", features = ["derive"] }
+  serde_json = "~1.0.140"
+  semver = "~1.0.25"
 
-uzers = "~0.11.0"
-sysinfo = "~0.33.1"
+  uzers = "~0.11.0"
+  sysinfo = "~0.33.1"
 
-clap_complete_command = { version = "~0.6.1", features = ["carapace", "fig", "nushell"] }
+  clap_complete_command = { version = "~0.6.1", features = ["carapace", "fig", "nushell"] }
 
-notify-rust = { version = "~4.11.4" }
+  notify-rust = { version = "~4.11.4" }
+
+[features]
+  unstable = []
+  stable = []
+
+[lints.clippy]
+  non_ascii_idents = "deny"
+  cast_sign_loss = "deny"
+
+  borrow_interior_mutable_const = "allow"
+  disallowed_names = "allow"
+  blanket_clippy_restriction_lints = "allow"
+
+  missing_panics_doc = "warn"
+  shadow_reuse = "warn"
+  shadow_same = "warn"
+  shadow_unrelated = "warn"
+  missing_const_for_fn = "warn"
+  as_conversions = "warn"
+  cast_lossless = "warn"
+  cast_possible_truncation = "warn"
+  cast_possible_wrap = "warn"
+  ptr_as_ptr = "warn"
+  many_single_char_names = "warn"
+  default_numeric_fallback = "warn"
+  checked_conversions = "warn"
+  match_bool = "warn"
+  needless_bitwise_bool = "warn"
+  arithmetic_side_effects = "warn"
+  modulo_arithmetic = "warn"
+  cast_precision_loss = "warn"
+  float_arithmetic = "warn"
+  float_cmp = "warn"
+  float_cmp_const = "warn"
+  imprecise_flops = "warn"
+  suboptimal_flops = "warn"
+  exhaustive_structs = "warn"
+  exhaustive_enums = "warn"
+  fn_params_excessive_bools = "warn"
+  enum_glob_use = "warn"
+  else_if_without_else = "warn"
+  string_lit_as_bytes = "warn"
+  string_slice = "warn"
+  large_types_passed_by_value = "warn"
+  trivially_copy_pass_by_ref = "warn"
+  inefficient_to_string = "warn"
+  copy_iterator = "warn"
+  cloned_instead_of_copied = "warn"
+  unwrap_used = "warn"
+  wildcard_imports = "warn"
+  self_named_module_files = "warn"
+  cargo_common_metadata = "warn"
+  negative_feature_names = "warn"
+  redundant_feature_names = "warn"
+  wildcard_dependencies = "warn"
+  dbg_macro = "warn"
+  await_holding_lock = "warn"
+  await_holding_refcell_ref = "warn"
+  unused_async = "warn"
+  debug_assert_with_mut_call = "warn"
+
+[workspace]
+  members = [
+    "libs/common",
+    "libs/operation_derive",
+    "libs/std_v2",
+  ]

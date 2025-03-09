@@ -1,14 +1,14 @@
 <div id="badges" align="center">
   <!-- Stuff used in this Repository.-->
-  <a href="https://rust-lang.org"><img alt="RustLang" src="resources/badges/rust.svg"></a>
-  <a href="https://toml.io/"><img alt="TOML" src="resources/badges/toml.svg"></a>
-  <a href="https://zed.dev/"><img alt="Zed" src="resources/badges/zed.svg"></a>
-  <a href="https://warp.dev/"><img alt="WarpTerminal" src="resources/badges/warp.svg"></a>
+  <a href="https://rust-lang.org"><img alt="RustLang" src="assets/badges/rust.svg"></a>
+  <a href="https://toml.io/"><img alt="TOML" src="assets/badges/toml.svg"></a>
+  <a href="https://zed.dev/"><img alt="Zed" src="assets/badges/zed.svg"></a>
+  <a href="https://warp.dev/"><img alt="WarpTerminal" src="assets/badges/warp.svg"></a>
 </div>
 
 <div align="center">
   <h1>
-    <img src="resources/logo.svg" style="height: 2.75em;">
+    <img src="assets/logo.svg" style="height: 2.75em;">
     <br />
     ctr
   </h1>

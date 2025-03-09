@@ -1,6 +1,10 @@
-/target
+.github/.io
+
+target
 **/target
 
-/crates/**/Cargo.lock
+libs/**/Cargo.lock
 
-/scripts
+scripts
+
+Cargo.dbg.toml

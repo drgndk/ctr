@@ -1,11 +1,21 @@
 [
   {
-    "label": "fmt: codebase",
+    "label": "build: debug",
+    "env": {
+      "RUSTFLAGS": "-Zmacro-backtrace"
+    },
+    "command": "cargo +nightly -Z unstable-options build -F unstable --artifact-dir $HOME/.ctr/bin/",
     "show_summary": false,
     "show_command": false,
-    "use_new_terminal": false,
-    // overengineered `fmt: file` for the entire codebase..
-    "command": "./scripts/format.fish -v",
+    "use_new_terminal": true,
+    "reveal_target": "center",
+    "hide": "on_success"
+  },
+  {
+    "label": "build: release",
+    "command": "cargo +nightly -Z unstable-options build -r -F stable --artifact-dir $HOME/.ctr/bin/",
+    "show_summary": false,
+    "show_command": false,
     "reveal_target": "center",
     "hide": "on_success"
   },
@@ -13,9 +23,27 @@
     "label": "fmt: file",
     "show_summary": false,
     "show_command": false,
-    "use_new_terminal": false,
-    "command": "cargo +nightly fmt --",
-    "args": ["--unstable-features", "$ZED_FILE"],
+    "command": "cargo +nightly fmt -- --unstable-features $ZED_FILE",
     "hide": "always"
+  },
+  {
+    "label": "fmt: codebase",
+    // overengineered `fmt: file` for the entire codebase..
+    "command": "./scripts/format.fish -v -w $ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "show_summary": false,
+    "show_command": false,
+    "use_new_terminal": false,
+    "reveal_target": "center"
+  },
+  {
+    "label": "lint: codebase",
+    "command": "cargo +nightly clippy --fix --allow-dirty",
+    "allow_concurrent_runs": true,
+    "show_summary": false,
+    "show_command": false,
+    "use_new_terminal": false,
+    "reveal_target": "center",
+    "hide": "on_success"
   }
 ]

@@ -1,7 +1,7 @@
 [package]
   name = "ctr"
   description = "ctr is a cute companion for your system."
-  version = "0.1.41"
+  version = "0.1.51"
   readme = "README.md"
   repository = "https://github.com/drgndk/ctr"
   edition = "2021"

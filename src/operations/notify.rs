@@ -1,11 +1,7 @@
 use std::{path::Path, thread::sleep};
 
 use clap::Args;
-use std_v2::{
-  command::{types::ArgumentType, Operation},
-  console::CONSOLE,
-  struct_gen,
-};
+use std_v2::{command::Operation, console::CONSOLE, struct_gen};
 
 struct_gen! {
   pub struct Options use Args, std_v2::derive::Command {

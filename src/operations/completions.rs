@@ -2,7 +2,7 @@ use std::path::Path;
 
 use clap::{Args, CommandFactory, Parser};
 use std_v2::{
-  command::{types::ArgumentType, Operation},
+  command::Operation,
   console::CONSOLE,
   derive::Command,
   env::{consts::SHELL, Shell},

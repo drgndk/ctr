@@ -5,7 +5,7 @@ use clap::{
   Parser, Subcommand,
 };
 use std_v2::{
-  command::{types::ArgumentType, Operation},
+  command::Operation,
   console::CONSOLE,
   derive::Command,
   env::consts::{BINARY_NAME, IS_DEBUG, REPO_DIR, USER_CONFIG_DIR},

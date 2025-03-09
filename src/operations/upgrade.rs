@@ -1,16 +1,15 @@
 use std::{
   path::Path,
-  process::{Command, ExitStatus},
+  process::{Command, Stdio},
 };
 
 use clap::{builder::PossibleValue, Args, ValueEnum};
-use reqwest::{blocking::Client, Response};
+use reqwest::blocking::Client;
 use semver::Version;
 use serde::Deserialize;
 use std_v2::{
-  command::{types::ArgumentType, Operation},
+  command::Operation,
   console::CONSOLE,
-  enum_gen,
   env::consts::{BINARY_NAME, INSTALL_DIR, REPO_DIR},
   struct_gen,
 };
@@ -60,6 +59,15 @@ impl ValueEnum for UpdateChannel {
   }
 }
 
+impl UpdateChannel {
+  fn to_str(&self) -> &'static str {
+    match self {
+      Self::Stable => "stable",
+      Self::Unstable => "unstable",
+    }
+  }
+}
+
 struct_gen! {
   pub struct Options use Args, std_v2::derive::Command {
     #[arg(short = 'H', long), help]
@@ -81,12 +89,6 @@ struct_gen! {
 
   impl Operation {
     const NAME: &'static str = "upgrade";
-
-    fn usage(status: i32) {
-      CONSOLE.print_usage::<Self>(vec![ArgumentType::Flags]);
-      CONSOLE.print_operation_collection(Self::operations());
-      std::process::exit(status);
-    }
 
     fn main(self: &Self) -> std::io::Result<()> {
       (self.help).then(|| Self::usage(0));
@@ -135,19 +137,32 @@ struct_gen! {
   }
 
   mod implementation {
-    fn exec_git_cmd(cmd: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn exec_git_cmd(cmd: &str, verbose: bool) -> Result<String, Box<dyn std::error::Error>> {
       let arguments = cmd.split_whitespace();
-      let output = std::process::Command::new("git")
+      let mut output = Command::new("git");
+
+      output
         .current_dir(&*REPO_DIR)
-        .args(arguments)
-        .output()
-        .unwrap_or_else(|err| CONSOLE.exit(format!("Failed to execute `git {cmd}`: {err}")));
+        .args(["-C", REPO_DIR.display().to_string().as_str()])
+        .args(arguments);
+
+      if !verbose {
+        output.stdin(Stdio::null());
+        output.stdout(Stdio::null());
+        output.stderr(Stdio::null());
+      }
+
+      let output = output.output().unwrap_or_else(|err| CONSOLE.exit(format!("Failed to execute `git {cmd}`: {err}")));
 
       if output.status.success() {
-        let output = String::from_utf8(output.stdout).unwrap_or_else(|err| CONSOLE.exit(format!("Failed to parse git command output: {err}")));
-        let output = output.trim_end().to_string();
+        if verbose {
+          let output = String::from_utf8(output.stdout).unwrap_or_else(|err| CONSOLE.exit(format!("Failed to parse git {cmd} command output: {err}")));
+          let output = output.trim_end().to_string();
 
-        return Ok(output);
+          return Ok(output);
+        }
+
+        return Ok(String::new());
       }
 
       Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, String::from_utf8(output.stderr).unwrap_or_else(|err| CONSOLE.exit(format!("Failed to parse git command error: {err}"))))))
@@ -155,7 +170,7 @@ struct_gen! {
 
     fn fetch(self: &Self, url: impl Into<String>) -> String {
       let url = url.into();
-      let response = Client::new().get(&url).header("User-Agent", format!("drgndk@ctr-{}", get_version())).send()
+      let response = Client::new().get(&url).header("User-Agent", format!("drgndk@{BINARY_NAME}-{}", get_version())).send()
         .unwrap_or_else(|err| CONSOLE.exit(format!("Failed to fetch '{url}': {err}")));
 
       match response.text() {
@@ -189,7 +204,7 @@ struct_gen! {
         .unwrap_or_else(|err| CONSOLE.exit(format!("Failed to parse the remote Cargo.toml: {err}")));
 
       let mut repo_origin = String::new();
-      if let Ok(repo_url) = Self::exec_git_cmd("remote get-url origin") {
+      if let Ok(repo_url) = Self::exec_git_cmd("remote get-url origin", true) {
         repo_origin = repo_url;
       };
 
@@ -198,7 +213,7 @@ struct_gen! {
           CONSOLE.print(format!("<green>=></green> Found new repository origin: <bold>{}</bold>", cargo_toml.package.repository));
         }
 
-        if let Err(err) = Self::exec_git_cmd(&format!("remote add origin {repo_origin}")){
+        if let Err(err) = Self::exec_git_cmd(&format!("remote add origin {repo_origin}"), false){
           CONSOLE.exit(format!("Failed to set repository origin: {err}"));
         }
 
@@ -231,35 +246,19 @@ struct_gen! {
         _ => "release"
       };
 
-      let git_cmd = |args: Vec<&'static str>| -> ExitStatus {
-        let mut cmd = Command::new("git");
-        cmd.current_dir(repo_path).args(["-C", repo_path.display().to_string().as_str()]).args(&args).arg("-q");
-
-        match cmd.status() {
-          Ok(status) => {
-            if !status.success() {
-              CONSOLE.exit(format!("Failed to execute the git {} command: Status: {status}", args.join(" ")));
-            }
-
-            status
-          },
-          Err(err) => CONSOLE.exit(format!("Failed to execute the git {} command: {err}", args.join(" ")))
-        }
-      };
-
       if !repo_path.join(".git").exists() {
         CONSOLE.print("<green>=></green> Setting up the remote origin, for future updates");
-        git_cmd(vec!["remote", "add", "origin", "https://github.com/drgndk/ctr.git"]);
-        git_cmd(vec!["branch", "-M", "main"]);
+        Self::exec_git_cmd("remote add origin https://github.com/drgndk/ctr.git", self.verbose);
+        Self::exec_git_cmd("branch -M main", self.verbose);
       }
 
       if self.force {
         CONSOLE.print("<green>=></green> Resetting local repository [Forced]");
-        git_cmd(vec!["reset", "--hard"]);
+        Self::exec_git_cmd("reset --hard", self.verbose);
       }
 
       CONSOLE.print("<green>=></green> Pulling latest changes");
-      git_cmd(vec!["pull"]);
+      Self::exec_git_cmd("pull", self.verbose);
 
 
 
@@ -278,7 +277,7 @@ struct_gen! {
 
       CONSOLE.print("<green>=></green> Building binary");
       let metadata_path = REPO_DIR.join("Cargo.toml").display().to_string();
-      let mut cargo_args = vec!["b", "--manifest-path", metadata_path.as_str()];
+      let mut cargo_args = vec!["b", "--manifest-path", metadata_path.as_str(), "-F", "stable"];
 
       if let UpdateChannel::Stable = channel {
         cargo_args.insert(1, "-r");
@@ -300,24 +299,13 @@ struct_gen! {
 
         if old_binary_path.exists() {
           if let Err(err) = std::fs::remove_file(&old_binary_path) {
-            CONSOLE.exit(format!("Failed to remove the old binary: {err}"));
+            CONSOLE.exit(format!("Failed to remove the old binary: {}: {err}", old_binary_path.display()));
           }
         }
 
         let new_binary_path = repo_path.join(format!("target/{target_path}/{BINARY_NAME}"));
         if let Err(err) = std::fs::copy(&new_binary_path, old_binary_path) {
-          CONSOLE.exit(format!("Failed to copy the new binary: {err}"));
-        }
-      }
-
-      let bin_path = &*INSTALL_DIR.join(format!("bin/{BINARY_NAME}"));
-      if !Path::new(&bin_path).exists() {
-        let new_binary_path = repo_path.join(format!("target/release/{BINARY_NAME}"));
-        if std::fs::rename(&new_binary_path, bin_path).is_err() {
-          println!();
-          CONSOLE.warn(format!("<brightyellow><white><bold>{BINARY_NAME}</bold></white> was successfully built using cargo, but no symlink was created inside <white>{}</white></brightyellow>", bin_path.display()));
-          CONSOLE.warn("<brightyellow>to do that, you can run the following command: </brightyellow>");
-          CONSOLE.print(format!("<bold>sudo</bold> ln -s {new_binary_path:?} {bin_path:?}"));
+          CONSOLE.exit(format!("Failed to copy the new binary: {}: {err}", new_binary_path.display()));
         }
       }
 

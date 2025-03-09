@@ -1,8 +1,8 @@
-use std::path::Path;
-
 use clap::Args;
 use std_v2::{
-  command::{types::ArgumentType, Operation}, console::CONSOLE, enum_gen, env::consts::HOME, string::{ansi::Effect, StringV2}, struct_gen
+  command::Operation,
+  console::CONSOLE,
+  struct_gen,
 };
 
 struct_gen! {

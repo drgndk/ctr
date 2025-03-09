@@ -2,7 +2,10 @@ use std::{os::unix::process::CommandExt, path::Path, process::Command};
 
 use clap::Args;
 use std_v2::{
-  command::{types::ArgumentType, Operation}, console::CONSOLE, enum_gen, env::consts::{BINARY_NAME, USER_CONFIG_DIR}, struct_gen
+  command::Operation,
+  console::CONSOLE,
+  env::consts::{BINARY_NAME, USER_CONFIG_DIR},
+  struct_gen,
 };
 mod ser;
 use ser::*;

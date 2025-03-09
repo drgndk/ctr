@@ -16,13 +16,17 @@ pub fn operation_info_derive(input: TokenStream) -> TokenStream {
     quote! {}
   };
 
-  let usage_attributes = input.attrs.iter().filter_map(|attr| {
-    if attr.path.is_ident("usage") {
-      Some(attr.parse_args::<TokenStream2>().unwrap())
-    } else {
-      None
-    }
-  }).collect::<Vec<_>>();
+  let usage_attributes = input
+    .attrs
+    .iter()
+    .filter_map(|attr| {
+      if attr.path.is_ident("usage") {
+        Some(attr.parse_args::<TokenStream2>().unwrap())
+      } else {
+        None
+      }
+    })
+    .collect::<Vec<_>>();
 
   let usage_vector = if !usage_attributes.is_empty() {
     quote! { vec![#(#usage_attributes),*] }

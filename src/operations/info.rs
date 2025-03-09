@@ -1,12 +1,7 @@
 use std::env::consts::*;
 
 use clap::Args;
-use std_v2::{
-  command::{types::ArgumentType, Operation},
-  console::CONSOLE,
-  env::consts::BINARY_NAME,
-  struct_gen,
-};
+use std_v2::{command::Operation, console::CONSOLE, env::consts::BINARY_NAME, struct_gen};
 use sysinfo::System;
 
 use crate::get_version;
